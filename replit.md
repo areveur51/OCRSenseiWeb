@@ -47,6 +47,13 @@ Files are stored on the local filesystem within an `uploads/` directory, organiz
 
 ## Recent Updates (October 30, 2025)
 
+### Search Results Ordering
+Search results are now ordered by OCR confidence score from highest to lowest:
+- Uses SQL CASE statement to select the correct confidence value based on `consensusSource` field
+- Maps `pytesseract_config1` → `pytesseractConfidence` and `pytesseract_config2` → `easyocrConfidence`
+- Results sorted DESC, showing most reliable OCR extractions first
+- Example: 69% → 59% → 44% confidence ordering
+
 ### Search Query Parameters Fix
 Fixed critical bug where search queries were not returning results:
 - **Problem**: queryKey with object `{ q: debouncedQuery }` was being serialized as `/api/search/[object Object]` instead of proper query parameters
