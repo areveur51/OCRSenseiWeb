@@ -8,6 +8,7 @@ import {
   insertProjectSchema,
   insertDirectorySchema,
   insertImageSchema,
+  insertMonitoredSearchSchema,
 } from "@shared/schema";
 
 const upload = multer({
@@ -463,6 +464,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const results = await storage.searchText(q);
       res.json(results);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Monitored Searches
+  app.get("/api/monitored-searches", async (req, res) => {
+    try {
+      const searches = await storage.getMonitoredSearches();
+      res.json(searches);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/monitored-searches", async (req, res) => {
+    try {
+      const validated = insertMonitoredSearchSchema.parse(req.body);
+      const search = await storage.createMonitoredSearch(validated);
+      res.status(201).json(search);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/monitored-searches/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteMonitoredSearch(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Monitored search not found" });
+      }
+      
+      res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
