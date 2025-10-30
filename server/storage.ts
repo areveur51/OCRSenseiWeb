@@ -6,16 +6,19 @@ import {
   images,
   ocrResults,
   processingQueue,
+  monitoredSearches,
   type Project,
   type Directory,
   type Image,
   type OcrResult,
   type ProcessingQueue,
+  type MonitoredSearch,
   type InsertProject,
   type InsertDirectory,
   type InsertImage,
   type InsertOcrResult,
   type InsertProcessingQueue,
+  type InsertMonitoredSearch,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -53,6 +56,11 @@ export interface IStorage {
 
   // Search
   searchText(query: string): Promise<Array<{ image: Image; ocrResult: OcrResult }>>;
+
+  // Monitored Searches
+  getMonitoredSearches(): Promise<Array<MonitoredSearch & { resultCount: number }>>;
+  createMonitoredSearch(search: InsertMonitoredSearch): Promise<MonitoredSearch>;
+  deleteMonitoredSearch(id: number): Promise<boolean>;
 
   // Statistics
   getProjectStats(projectId: number): Promise<{
@@ -243,6 +251,38 @@ export class DbStorage implements IStorage {
       ));
     
     return results;
+  }
+
+  // Monitored Searches
+  async getMonitoredSearches(): Promise<Array<MonitoredSearch & { resultCount: number }>> {
+    const searches = await db.select().from(monitoredSearches).orderBy(desc(monitoredSearches.createdAt));
+    
+    // For each search, count the number of results
+    const searchesWithCounts = await Promise.all(
+      searches.map(async (search) => {
+        const count = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(ocrResults)
+          .where(ilike(ocrResults.consensusText, `%${search.searchTerm}%`));
+        
+        return {
+          ...search,
+          resultCount: count[0]?.count || 0,
+        };
+      })
+    );
+    
+    return searchesWithCounts;
+  }
+
+  async createMonitoredSearch(search: InsertMonitoredSearch): Promise<MonitoredSearch> {
+    const [newSearch] = await db.insert(monitoredSearches).values(search).returning();
+    return newSearch;
+  }
+
+  async deleteMonitoredSearch(id: number): Promise<boolean> {
+    const result = await db.delete(monitoredSearches).where(eq(monitoredSearches.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 
   // Statistics

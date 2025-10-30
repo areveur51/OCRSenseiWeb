@@ -93,6 +93,12 @@ export const processingQueue = pgTable("processing_queue", {
   statusIdx: index("processing_queue_status_idx").on(table.status),
 }));
 
+export const monitoredSearches = pgTable("monitored_searches", {
+  id: serial("id").primaryKey(),
+  searchTerm: text("search_term").notNull().unique(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Insert schemas
 export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
@@ -128,12 +134,18 @@ export const insertProcessingQueueSchema = createInsertSchema(processingQueue).o
   completedAt: true,
 });
 
+export const insertMonitoredSearchSchema = createInsertSchema(monitoredSearches).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Select types
 export type Project = typeof projects.$inferSelect;
 export type Directory = typeof directories.$inferSelect;
 export type Image = typeof images.$inferSelect;
 export type OcrResult = typeof ocrResults.$inferSelect;
 export type ProcessingQueue = typeof processingQueue.$inferSelect;
+export type MonitoredSearch = typeof monitoredSearches.$inferSelect;
 
 // Insert types
 export type InsertProject = z.infer<typeof insertProjectSchema>;
@@ -141,3 +153,4 @@ export type InsertDirectory = z.infer<typeof insertDirectorySchema>;
 export type InsertImage = z.infer<typeof insertImageSchema>;
 export type InsertOcrResult = z.infer<typeof insertOcrResultSchema>;
 export type InsertProcessingQueue = z.infer<typeof insertProcessingQueueSchema>;
+export type InsertMonitoredSearch = z.infer<typeof insertMonitoredSearchSchema>;
