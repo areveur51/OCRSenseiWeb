@@ -1,0 +1,80 @@
+import { Upload, FileImage } from "lucide-react";
+import { useState } from "react";
+
+interface UploadZoneProps {
+  onFilesSelected?: (files: File[]) => void;
+}
+
+export function UploadZone({ onFilesSelected }: UploadZoneProps) {
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    onFilesSelected?.(files);
+    console.log('Files dropped:', files.map(f => f.name));
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    onFilesSelected?.(files);
+    console.log('Files selected:', files.map(f => f.name));
+  };
+
+  return (
+    <div
+      className={`
+        border-2 border-dashed rounded-lg min-h-48 
+        flex flex-col items-center justify-center gap-4 p-8
+        transition-colors
+        ${isDragging ? 'border-primary bg-primary/5' : 'border-border hover-elevate'}
+      `}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      data-testid="upload-zone"
+    >
+      <div className="p-4 rounded-full bg-primary/10">
+        {isDragging ? (
+          <FileImage className="h-8 w-8 text-primary" />
+        ) : (
+          <Upload className="h-8 w-8 text-primary" />
+        )}
+      </div>
+
+      <div className="text-center space-y-2">
+        <p className="font-medium">
+          {isDragging ? 'Drop files here' : 'Drag and drop images here'}
+        </p>
+        <p className="text-sm text-muted-foreground">or</p>
+        <label>
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileInput}
+            data-testid="input-file"
+          />
+          <span className="text-sm text-primary hover:underline cursor-pointer font-medium">
+            Browse files
+          </span>
+        </label>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Supports: JPG, PNG, TIFF, PDF (Max 10MB per file)
+      </p>
+    </div>
+  );
+}
