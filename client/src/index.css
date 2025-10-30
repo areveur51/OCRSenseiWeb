@@ -3,78 +3,79 @@
 @tailwind utilities;
 
 /* HTOP TERMINAL THEME - Softer colors easier on the eyes */
+/* Light mode: Old CRT green phosphor screen aesthetic */
 :root {
-  --button-outline: rgba(85, 255, 85, .15);
-  --badge-outline: rgba(85, 255, 85, .10);
+  --button-outline: rgba(0, 100, 0, .15);
+  --badge-outline: rgba(0, 100, 0, .10);
 
   /* Automatic computation of border around primary / danger buttons */
   --opaque-button-border-intensity: -8; /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(85, 255, 85, .05);
-  --elevate-2: rgba(85, 255, 85, .12);
+  --elevate-1: rgba(0, 100, 0, .05);
+  --elevate-2: rgba(0, 100, 0, .12);
 
-  --background: 0 0% 5%;
+  --background: 120 30% 92%;
 
-  --foreground: 120 70% 65%;
+  --foreground: 120 60% 25%;
 
-  --border: 120 40% 20%;
+  --border: 120 25% 70%;
 
-  --card: 0 0% 7%;
+  --card: 120 25% 95%;
 
-  --card-foreground: 120 70% 65%;
+  --card-foreground: 120 60% 25%;
 
-  --card-border: 120 40% 18%;
+  --card-border: 120 25% 82%;
 
-  --sidebar: 0 0% 6%;
+  --sidebar: 120 28% 90%;
 
-  --sidebar-foreground: 120 70% 65%;
+  --sidebar-foreground: 120 60% 25%;
 
-  --sidebar-border: 120 40% 15%;
+  --sidebar-border: 120 25% 75%;
 
-  --sidebar-primary: 120 70% 55%;
+  --sidebar-primary: 120 65% 35%;
 
-  --sidebar-primary-foreground: 0 0% 8%;
+  --sidebar-primary-foreground: 120 30% 98%;
 
-  --sidebar-accent: 0 0% 12%;
+  --sidebar-accent: 120 20% 85%;
 
-  --sidebar-accent-foreground: 120 70% 70%;
+  --sidebar-accent-foreground: 120 60% 28%;
 
-  --sidebar-ring: 120 70% 55%;
+  --sidebar-ring: 120 65% 35%;
 
-  --popover: 0 0% 8%;
+  --popover: 120 25% 96%;
 
-  --popover-foreground: 120 70% 65%;
+  --popover-foreground: 120 60% 25%;
 
-  --popover-border: 120 40% 20%;
+  --popover-border: 120 25% 75%;
 
-  --primary: 120 70% 55%;
+  --primary: 120 65% 35%;
 
-  --primary-foreground: 0 0% 8%;
+  --primary-foreground: 120 30% 98%;
 
-  --secondary: 0 0% 15%;
+  --secondary: 120 20% 82%;
 
-  --secondary-foreground: 120 70% 65%;
+  --secondary-foreground: 120 60% 25%;
 
-  --muted: 0 0% 12%;
+  --muted: 120 20% 88%;
 
-  --muted-foreground: 120 50% 45%;
+  --muted-foreground: 120 40% 45%;
 
-  --accent: 180 70% 45%;
+  --accent: 180 60% 40%;
 
-  --accent-foreground: 0 0% 95%;
+  --accent-foreground: 0 0% 98%;
 
-  --destructive: 0 80% 50%;
+  --destructive: 0 75% 45%;
 
   --destructive-foreground: 0 0% 98%;
 
-  --input: 120 40% 25%;
-  --ring: 120 70% 55%;
-  --chart-1: 120 70% 55%;
-  --chart-2: 180 70% 50%;
-  --chart-3: 60 70% 55%;
-  --chart-4: 200 70% 55%;
-  --chart-5: 40 70% 55%;
+  --input: 120 25% 80%;
+  --ring: 120 65% 35%;
+  --chart-1: 120 65% 40%;
+  --chart-2: 180 60% 45%;
+  --chart-3: 60 65% 40%;
+  --chart-4: 200 60% 45%;
+  --chart-5: 40 65% 40%;
 
   --font-sans: "Courier New", Consolas, Monaco, "Lucida Console", monospace;
   --font-serif: "Courier New", Consolas, Monaco, "Lucida Console", monospace;
@@ -93,13 +94,13 @@
 
   /* Automatically computed borders - intensity can be controlled by the user by the --opaque-button-border-intensity setting */
 
-  --sidebar-primary-border: 120 70% 45%;
-  --sidebar-accent-border: 0 0% 10%;
-  --primary-border: 120 70% 45%;
-  --secondary-border: 0 0% 12%;
-  --muted-border: 0 0% 10%;
-  --accent-border: 180 70% 35%;
-  --destructive-border: 0 80% 40%;
+  --sidebar-primary-border: 120 65% 30%;
+  --sidebar-accent-border: 120 20% 75%;
+  --primary-border: 120 65% 30%;
+  --secondary-border: 120 20% 72%;
+  --muted-border: 120 20% 78%;
+  --accent-border: 180 60% 35%;
+  --destructive-border: 0 75% 38%;
 }
 
 .dark {

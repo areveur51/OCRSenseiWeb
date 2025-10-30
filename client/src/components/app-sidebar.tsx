@@ -10,9 +10,11 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home, FolderOpen, Search, Settings, ChevronRight } from "lucide-react";
+import { Home, FolderOpen, Search, Settings, ChevronRight, Pencil } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { EditDirectoryDialog } from "@/components/edit-directory-dialog";
+import { Button } from "@/components/ui/button";
 
 interface Project {
   id: string;
@@ -30,6 +32,12 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
     new Set()
   );
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingDirectory, setEditingDirectory] = useState<{
+    projectId: string;
+    projectName: string;
+    directoryName: string;
+  } | null>(null);
 
   const toggleProject = (projectId: string) => {
     const newExpanded = new Set(expandedProjects);
@@ -39,6 +47,17 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
       newExpanded.add(projectId);
     }
     setExpandedProjects(newExpanded);
+  };
+
+  const handleEditDirectory = (projectId: string, projectName: string, directoryName: string) => {
+    setEditingDirectory({ projectId, projectName, directoryName });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveDirectory = (newName: string) => {
+    console.log("Rename directory:", editingDirectory, "to:", newName);
+    // TODO: Implement actual directory renaming logic
+    setEditingDirectory(null);
   };
 
   return (
@@ -121,19 +140,35 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
                         return (
                           <div
                             key={subdir}
-                            className="flex items-center gap-2 py-1.5 px-2 hover-elevate active-elevate-2 cursor-pointer rounded"
-                            onClick={() => {
-                              const path = `/project/${project.id}/${subdir}`;
-                              setLocation(path);
-                              onNavigate?.(path);
-                            }}
+                            className="group flex items-center gap-1 py-1.5 px-2 hover-elevate active-elevate-2 cursor-pointer rounded"
                             data-testid={`nav-subdir-${subdir}`}
                           >
-                            <span className="text-primary ml-8">
-                              {isLastProject ? "        " : "    │   "}
-                              {isLastSubdir ? "└──" : "├──"}
-                            </span>
-                            <span className="text-sm">{subdir}</span>
+                            <div 
+                              className="flex items-center gap-2 flex-1"
+                              onClick={() => {
+                                const path = `/project/${project.id}/${subdir}`;
+                                setLocation(path);
+                                onNavigate?.(path);
+                              }}
+                            >
+                              <span className="text-primary ml-8">
+                                {isLastProject ? "        " : "    │   "}
+                                {isLastSubdir ? "└──" : "├──"}
+                              </span>
+                              <span className="text-sm">{subdir}</span>
+                            </div>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditDirectory(project.id, project.name, subdir);
+                              }}
+                              data-testid={`button-edit-${subdir}`}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
                           </div>
                         );
                       })}
@@ -163,15 +198,25 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
         
         <div className="mt-3 pt-3 border-t">
           <pre className="ascii-art text-sm opacity-90">
-{`┌───────────────┐
-│  ████  ✓      │
-│  Online       │
-│  Up: 99.9%    │
-│  Active_      │
-└───────────────┘`}
+{`┌──────────────────┐
+│  ████   [OK]     │
+│  Online          │
+│  Up: 99.9%       │
+│  Active_         │
+└──────────────────┘`}
           </pre>
         </div>
       </SidebarFooter>
+
+      {editingDirectory && (
+        <EditDirectoryDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          directoryName={editingDirectory.directoryName}
+          projectName={editingDirectory.projectName}
+          onSave={handleSaveDirectory}
+        />
+      )}
     </Sidebar>
   );
 }

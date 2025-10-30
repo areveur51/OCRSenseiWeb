@@ -11,6 +11,7 @@ import Dashboard from "@/pages/dashboard";
 import ProjectDetail from "@/pages/project-detail";
 import ImageDetail from "@/pages/image-detail";
 import Search from "@/pages/search";
+import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/project/:id/:subdir" component={ProjectDetail} />
       <Route path="/image/:id" component={ImageDetail} />
       <Route path="/search" component={Search} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
