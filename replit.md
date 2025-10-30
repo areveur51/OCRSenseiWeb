@@ -47,6 +47,14 @@ Files are stored on the local filesystem within an `uploads/` directory, organiz
 
 ## Recent Updates (October 30, 2025)
 
+### Search Query Parameters Fix
+Fixed critical bug where search queries were not returning results:
+- **Problem**: queryKey with object `{ q: debouncedQuery }` was being serialized as `/api/search/[object Object]` instead of proper query parameters
+- **Solution**: Added explicit `queryFn` to construct URL with proper query parameters: `/api/search?q=pedro`
+- **Impact**: Search now properly returns results for all queries (e.g., "pedro" correctly returns 2 results)
+- Changed queryKey format from `["/api/search", { q: debouncedQuery }]` to `["/api/search", debouncedQuery]` for proper cache invalidation
+- Uses `encodeURIComponent()` to properly encode search terms
+
 ### Progress Bar Fix
 Fixed dual-pass OCR counting issue where progress showed 117% (7 processed / 6 total). Changed `processedImages` query to count distinct images instead of OCR result records, since each image creates 2 results (PSM 6 + PSM 3 configurations).
 
