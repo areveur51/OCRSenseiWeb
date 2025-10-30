@@ -93,33 +93,13 @@
 
   /* Automatically computed borders - intensity can be controlled by the user by the --opaque-button-border-intensity setting */
 
-  /* Fallback for older browsers */
-  --sidebar-primary-border: hsl(var(--sidebar-primary));
-  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --sidebar-accent-border: hsl(var(--sidebar-accent));
-  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --primary-border: hsl(var(--primary));
-  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --secondary-border: hsl(var(--secondary));
-  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --muted-border: hsl(var(--muted));
-  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --accent-border: hsl(var(--accent));
-  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --destructive-border: hsl(var(--destructive));
-  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --sidebar-primary-border: 120 100% 42%;
+  --sidebar-accent-border: 120 100% 10%;
+  --primary-border: 120 100% 42%;
+  --secondary-border: 120 100% 10%;
+  --muted-border: 120 100% 8%;
+  --accent-border: 120 100% 12%;
+  --destructive-border: 0 100% 38%;
 }
 
 .dark {
@@ -203,6 +183,13 @@
   --shadow-xl: 0px 20px 25px -5px hsl(120 100% 50% / 0.35), 0px 25px 50px -12px hsl(120 100% 50% / 0.50);
   --shadow-2xl: 0px 25px 50px -12px hsl(120 100% 50% / 0.60);
 
+  --sidebar-primary-border: 120 100% 47%;
+  --sidebar-accent-border: 120 100% 8%;
+  --primary-border: 120 100% 47%;
+  --secondary-border: 120 100% 8%;
+  --muted-border: 120 100% 6%;
+  --accent-border: 120 100% 10%;
+  --destructive-border: 0 100% 42%;
 }
 
 @layer base {
