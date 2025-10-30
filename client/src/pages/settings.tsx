@@ -1,19 +1,63 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch as ToggleSwitch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { 
   Settings as SettingsIcon, 
-  Database, 
-  Cpu, 
-  HardDrive,
-  Gauge,
-  Save
+  Search, 
+  Save,
+  Check
 } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { Settings as SettingsType } from "@shared/schema";
 
 export default function Settings() {
+  const { toast } = useToast();
+  const [fuzzyVariations, setFuzzyVariations] = useState<number | null>(null);
+
+  const { data: settings, isLoading } = useQuery<SettingsType>({
+    queryKey: ["/api/settings"],
+  });
+
+  useEffect(() => {
+    if (settings && fuzzyVariations === null) {
+      setFuzzyVariations(settings.fuzzySearchVariations);
+    }
+  }, [settings, fuzzyVariations]);
+
+  const updateMutation = useMutation({
+    mutationFn: async (updates: { fuzzySearchVariations: number }) => {
+      return apiRequest("PATCH", "/api/settings", updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({
+        title: "Settings Saved",
+        description: "Your preferences have been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Save Failed",
+        description: error.message || "Failed to save settings",
+      });
+    },
+  });
+
+  const handleSave = () => {
+    if (fuzzyVariations !== null) {
+      updateMutation.mutate({ fuzzySearchVariations: fuzzyVariations });
+    }
+  };
+
+  const currentValue = fuzzyVariations ?? settings?.fuzzySearchVariations ?? 2;
+  const hasChanges = settings && fuzzyVariations !== null && fuzzyVariations !== settings.fuzzySearchVariations;
+
   return (
     <div className="space-y-6">
       <div className="flex gap-8">
@@ -31,275 +75,187 @@ export default function Settings() {
             <span className="headline-highlight">SYSTEM SETTINGS</span>
           </h1>
           <p className="text-sm text-muted-foreground mt-2">
-            &gt; Configure OCR processing and system parameters_
+            &gt; Configure search behavior and system parameters_
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* OCR Processing Settings */}
+        {/* Search Settings */}
         <Card className="p-6">
           <div className="flex items-start gap-3 mb-6">
             <pre className="ascii-art text-sm opacity-80">
-{`┌─────┐
-│ CPU │
-└─────┘`}
+{`┌────────┐
+│ SEARCH │
+└────────┘`}
             </pre>
             <div>
               <h2 className="text-lg font-semibold">
-                <span className="headline-highlight">OCR PROCESSING</span>
+                <span className="headline-highlight">FUZZY SEARCH</span>
               </h2>
               <p className="text-xs text-muted-foreground mt-1">
-                Configure text extraction engines
+                Configure search matching tolerance
               </p>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="pytesseract-enabled" className="text-sm font-medium">
-                  Pytesseract Engine
+          {isLoading ? (
+            <div className="text-sm text-muted-foreground">Loading settings...</div>
+          ) : (
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <Label className="text-sm font-medium">
+                  Character Variation Tolerance
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Enable Tesseract OCR processing
+                  Maximum number of character differences allowed in fuzzy search matches
                 </p>
-              </div>
-              <ToggleSwitch 
-                id="pytesseract-enabled" 
-                defaultChecked 
-                data-testid="switch-pytesseract"
-              />
-            </div>
 
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="easyocr-enabled" className="text-sm font-medium">
-                  EasyOCR Engine
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Enable deep learning OCR processing
-                </p>
-              </div>
-              <ToggleSwitch 
-                id="easyocr-enabled" 
-                defaultChecked 
-                data-testid="switch-easyocr"
-              />
-            </div>
+                <RadioGroup
+                  value={currentValue.toString()}
+                  onValueChange={(value) => setFuzzyVariations(parseInt(value))}
+                  data-testid="radiogroup-fuzzy-variations"
+                >
+                  <div className="flex items-start space-x-3 p-3 rounded-md hover-elevate active-elevate-2">
+                    <RadioGroupItem value="1" id="variation-1" data-testid="radio-variation-1" />
+                    <div className="flex-1 space-y-1">
+                      <Label htmlFor="variation-1" className="font-medium cursor-pointer">
+                        1 Character Variation
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Strictest matching - only very similar words (e.g., "Troop" matches "Troo")
+                      </p>
+                      <div className="flex gap-2 flex-wrap mt-2">
+                        <Badge variant="secondary" className="text-xs">
+                          Precision: High
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
 
-            <div className="space-y-2 pt-2">
-              <Label htmlFor="confidence-threshold" className="text-sm font-medium">
-                Minimum Confidence Threshold
-              </Label>
-              <div className="flex items-center gap-3">
-                <Input
-                  id="confidence-threshold"
-                  type="number"
-                  min="0"
-                  max="100"
-                  defaultValue="80"
-                  className="w-24"
-                  data-testid="input-confidence"
-                />
-                <span className="text-sm text-muted-foreground">%</span>
-                <Badge variant="secondary" className="ml-auto">
-                  <Gauge className="h-3 w-3 mr-1" />
-                  Default: 80%
-                </Badge>
+                  <div className="flex items-start space-x-3 p-3 rounded-md hover-elevate active-elevate-2">
+                    <RadioGroupItem value="2" id="variation-2" data-testid="radio-variation-2" />
+                    <div className="flex-1 space-y-1">
+                      <Label htmlFor="variation-2" className="font-medium cursor-pointer">
+                        2 Character Variations
+                        {currentValue === 2 && (
+                          <Badge variant="outline" className="ml-2">
+                            <Check className="h-3 w-3 mr-1" />
+                            Default
+                          </Badge>
+                        )}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Balanced matching - moderate tolerance (e.g., "jack" matches "back", "hack", "Jace")
+                      </p>
+                      <div className="flex gap-2 flex-wrap mt-2">
+                        <Badge variant="secondary" className="text-xs">
+                          Precision: Medium
+                        </Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          Recall: Medium
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3 p-3 rounded-md hover-elevate active-elevate-2">
+                    <RadioGroupItem value="3" id="variation-3" data-testid="radio-variation-3" />
+                    <div className="flex-1 space-y-1">
+                      <Label htmlFor="variation-3" className="font-medium cursor-pointer">
+                        3 Character Variations
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Loosest matching - high tolerance (e.g., "jack" matches "black", "smack")
+                      </p>
+                      <div className="flex gap-2 flex-wrap mt-2">
+                        <Badge variant="secondary" className="text-xs">
+                          Recall: High
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="pt-4 border-t">
+                <div className="flex items-center gap-3">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-xs font-medium">Current Setting</p>
+                    <p className="text-xs text-muted-foreground">
+                      {currentValue === 1 && "Strict matching - 1 character variation"}
+                      {currentValue === 2 && "Balanced matching - 2 character variations"}
+                      {currentValue === 3 && "Loose matching - 3 character variations"}
+                    </p>
+                  </div>
+                  {hasChanges && (
+                    <Badge variant="outline" className="text-primary">
+                      Unsaved
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </Card>
 
-        {/* Database Settings */}
+        {/* Info Card */}
         <Card className="p-6">
           <div className="flex items-start gap-3 mb-6">
             <pre className="ascii-art text-sm opacity-80">
 {`┌──────┐
-│  DB  │
+│ INFO │
 └──────┘`}
             </pre>
             <div>
               <h2 className="text-lg font-semibold">
-                <span className="headline-highlight">DATABASE</span>
+                <span className="headline-highlight">ABOUT FUZZY SEARCH</span>
               </h2>
               <p className="text-xs text-muted-foreground mt-1">
-                PostgreSQL connection settings
+                How fuzzy search works
               </p>
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 text-sm">
             <div className="space-y-2">
-              <Label htmlFor="db-host" className="text-sm font-medium">
-                Database Host
-              </Label>
-              <Input
-                id="db-host"
-                type="text"
-                placeholder="localhost"
-                defaultValue="localhost"
-                data-testid="input-db-host"
-              />
+              <h3 className="font-medium">What is Fuzzy Search?</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Fuzzy search finds words that are similar to your search term, even if they're not exact matches. 
+                This is useful for OCR text which may contain errors or variations.
+              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="db-port" className="text-sm font-medium">
-                Port
-              </Label>
-              <Input
-                id="db-port"
-                type="number"
-                placeholder="5432"
-                defaultValue="5432"
-                data-testid="input-db-port"
-              />
-            </div>
-
-            <div className="flex items-center justify-between gap-4 pt-2">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-medium">Connection Status</Label>
-                <p className="text-xs text-muted-foreground">
-                  Database connectivity
-                </p>
+              <h3 className="font-medium">Examples</h3>
+              <div className="space-y-2">
+                <div className="p-2 rounded bg-muted/30">
+                  <p className="text-xs font-mono">
+                    Search: <span className="text-primary">"Roster"</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    → Matches: "Roser", "Moster", "oster"
+                  </p>
+                </div>
+                <div className="p-2 rounded bg-muted/30">
+                  <p className="text-xs font-mono">
+                    Search: <span className="text-primary">"Cavalry"</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    → Matches: "Cavalr", "Cavaley"
+                  </p>
+                </div>
               </div>
-              <Badge variant="outline" className="text-primary">
-                <Database className="h-3 w-3 mr-1" />
-                Connected
-              </Badge>
-            </div>
-          </div>
-        </Card>
-
-        {/* Storage Settings */}
-        <Card className="p-6">
-          <div className="flex items-start gap-3 mb-6">
-            <pre className="ascii-art text-sm opacity-80">
-{`┌───────┐
-│  HDD  │
-└───────┘`}
-            </pre>
-            <div>
-              <h2 className="text-lg font-semibold">
-                <span className="headline-highlight">STORAGE</span>
-              </h2>
-              <p className="text-xs text-muted-foreground mt-1">
-                File storage and cache settings
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="storage-path" className="text-sm font-medium">
-                Image Storage Path
-              </Label>
-              <Input
-                id="storage-path"
-                type="text"
-                placeholder="/data/images"
-                defaultValue="/data/images"
-                data-testid="input-storage-path"
-              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cache-size" className="text-sm font-medium">
-                Cache Size Limit (MB)
-              </Label>
-              <Input
-                id="cache-size"
-                type="number"
-                placeholder="1024"
-                defaultValue="1024"
-                data-testid="input-cache-size"
-              />
-            </div>
-
-            <div className="flex items-center justify-between gap-4 pt-2">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-medium">Disk Usage</Label>
-                <p className="text-xs text-muted-foreground">
-                  Current storage utilization
-                </p>
-              </div>
-              <Badge variant="secondary">
-                <HardDrive className="h-3 w-3 mr-1" />
-                2.4 GB / 10 GB
-              </Badge>
-            </div>
-          </div>
-        </Card>
-
-        {/* Performance Settings */}
-        <Card className="p-6">
-          <div className="flex items-start gap-3 mb-6">
-            <pre className="ascii-art text-sm opacity-80">
-{`┌─────────┐
-│  PERF   │
-└─────────┘`}
-            </pre>
-            <div>
-              <h2 className="text-lg font-semibold">
-                <span className="headline-highlight">PERFORMANCE</span>
-              </h2>
-              <p className="text-xs text-muted-foreground mt-1">
-                Processing and concurrency settings
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="worker-threads" className="text-sm font-medium">
-                Worker Threads
-              </Label>
-              <Input
-                id="worker-threads"
-                type="number"
-                min="1"
-                max="16"
-                placeholder="4"
-                defaultValue="4"
-                data-testid="input-worker-threads"
-              />
-              <p className="text-xs text-muted-foreground">
-                Number of concurrent processing threads
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="batch-size" className="text-sm font-medium">
-                Batch Size
-              </Label>
-              <Input
-                id="batch-size"
-                type="number"
-                min="1"
-                max="100"
-                placeholder="10"
-                defaultValue="10"
-                data-testid="input-batch-size"
-              />
-              <p className="text-xs text-muted-foreground">
-                Images processed per batch
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between gap-4 pt-2">
-              <div className="space-y-0.5">
-                <Label htmlFor="auto-process" className="text-sm font-medium">
-                  Auto-process on Upload
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Start OCR immediately after upload
-                </p>
-              </div>
-              <ToggleSwitch 
-                id="auto-process" 
-                data-testid="switch-auto-process"
-              />
+              <h3 className="font-medium">How to Choose</h3>
+              <ul className="text-xs text-muted-foreground space-y-1.5 list-disc list-inside">
+                <li>Use <strong>1 variation</strong> for clean, high-quality scans</li>
+                <li>Use <strong>2 variations</strong> for most documents (recommended)</li>
+                <li>Use <strong>3 variations</strong> for poor quality or degraded scans</li>
+              </ul>
             </div>
           </div>
         </Card>
@@ -307,11 +263,15 @@ export default function Settings() {
 
       <div className="flex items-center justify-between gap-4 pt-4">
         <pre className="ascii-art text-sm opacity-70 hidden md:block">
-{`[TERMINAL] Configuration loaded successfully`}
+{`[TERMINAL] ${hasChanges ? "Unsaved changes detected" : "Configuration loaded successfully"}`}
         </pre>
-        <Button data-testid="button-save-settings">
+        <Button 
+          onClick={handleSave}
+          disabled={!hasChanges || updateMutation.isPending}
+          data-testid="button-save-settings"
+        >
           <Save className="h-4 w-4 mr-2" />
-          Save Configuration
+          {updateMutation.isPending ? "Saving..." : "Save Configuration"}
         </Button>
       </div>
     </div>
