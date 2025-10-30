@@ -62,3 +62,13 @@ Added sticky sidebar navigation tree to project detail page showing all director
 ### UI Refinements
 - Removed "DIRECTORIES" heading from sidebar navigation for cleaner appearance
 - Fixed search to be case-insensitive (changed from `LIKE` to `ILIKE` in PostgreSQL query), allowing searches like "pedro" to match "Pedro", "PEDRO", etc.
+
+### URL Download Enhancement
+Added HTML page parsing for URL downloads, enabling downloads from archives.gov and similar sites:
+- Installed `cheerio` for HTML parsing
+- Implemented `extractImageUrl()` method that:
+  - Checks if URL is already a direct image (via HEAD request)
+  - If HTML, parses page to find download links (e.g., links with "Download" text to S3 buckets)
+  - Falls back gracefully to original URL on errors
+- Fixed filename derivation to use resolved image URL instead of HTML page URL, ensuring proper file extensions
+- Supports archives.gov URLs like `https://catalog.archives.gov/id/150268931?objectPage=39`
