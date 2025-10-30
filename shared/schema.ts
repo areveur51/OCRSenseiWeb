@@ -6,10 +6,24 @@ import {
   integer, 
   timestamp, 
   jsonb,
-  serial 
+  serial,
+  customType
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Custom bytea type for storing binary data
+const bytea = customType<{ data: Buffer }>({
+  dataType() {
+    return 'bytea';
+  },
+  toDriver(value: Buffer) {
+    return value;
+  },
+  fromDriver(value: unknown) {
+    return value as Buffer;
+  },
+});
 
 export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
@@ -33,13 +47,14 @@ export const images = pgTable("images", {
   directoryId: integer("directory_id").notNull().references(() => directories.id, { onDelete: "cascade" }),
   filename: text("filename").notNull(),
   originalFilename: text("original_filename").notNull(),
-  filePath: text("file_path").notNull(),
+  filePath: text("file_path"),
   fileSize: integer("file_size").notNull(),
   format: text("format").notNull(),
   width: integer("width"),
   height: integer("height"),
   sourceType: text("source_type").notNull(),
   sourceUrl: text("source_url"),
+  imageData: bytea("image_data"),
   uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
 });
 
