@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Home, FolderOpen, Search, Settings, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 
 interface Project {
   id: string;
@@ -25,6 +26,7 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
+  const [, setLocation] = useLocation();
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
     new Set()
   );
@@ -65,8 +67,8 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
               <div
                 className="flex items-center gap-2 py-1.5 px-2 hover-elevate active-elevate-2 cursor-pointer rounded"
                 onClick={() => {
+                  setLocation("/");
                   onNavigate?.("/");
-                  console.log("Navigate to dashboard");
                 }}
                 data-testid="nav-dashboard"
               >
@@ -78,8 +80,8 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
               <div
                 className="flex items-center gap-2 py-1.5 px-2 hover-elevate active-elevate-2 cursor-pointer rounded"
                 onClick={() => {
+                  setLocation("/search");
                   onNavigate?.("/search");
-                  console.log("Navigate to search");
                 }}
                 data-testid="nav-search"
               >
@@ -121,8 +123,9 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
                             key={subdir}
                             className="flex items-center gap-2 py-1.5 px-2 hover-elevate active-elevate-2 cursor-pointer rounded"
                             onClick={() => {
-                              onNavigate?.(`/project/${project.id}/${subdir}`);
-                              console.log(`Navigate to ${project.name}/${subdir}`);
+                              const path = `/project/${project.id}/${subdir}`;
+                              setLocation(path);
+                              onNavigate?.(path);
                             }}
                             data-testid={`nav-subdir-${subdir}`}
                           >
@@ -147,8 +150,8 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
           <div
             className="flex items-center gap-2 py-1.5 px-2 hover-elevate active-elevate-2 cursor-pointer rounded"
             onClick={() => {
+              setLocation("/settings");
               onNavigate?.("/settings");
-              console.log("Navigate to settings");
             }}
             data-testid="nav-settings"
           >

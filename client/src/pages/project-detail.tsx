@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { Button } from "@/components/ui/button";
 import { ImageCard } from "@/components/image-card";
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 
 export default function ProjectDetail() {
+  const [, setLocation] = useLocation();
   const [images] = useState([
     {
       id: "1",
@@ -120,7 +122,7 @@ export default function ProjectDetail() {
           <ImageCard
             key={image.id}
             {...image}
-            onClick={() => console.log("Open image:", image.id)}
+            onClick={() => setLocation(`/image/${image.id}`)}
           />
         ))}
       </div>

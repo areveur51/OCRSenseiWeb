@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { FolderOpen, FileText, CheckCircle2, TrendingUp, Plus } from "lucide-react";
 import { StatsCard } from "@/components/stats-card";
 import { ProjectCard } from "@/components/project-card";
@@ -6,6 +7,7 @@ import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { SearchBar } from "@/components/search-bar";
 
 export default function Dashboard() {
+  const [, setLocation] = useLocation();
   const [projects] = useState([
     {
       id: "1",
@@ -121,7 +123,7 @@ export default function Dashboard() {
             <ProjectCard
               key={project.id}
               {...project}
-              onClick={() => console.log("Open project:", project.id)}
+              onClick={() => setLocation(`/project/${project.id}/overview`)}
             />
           ))}
         </div>
