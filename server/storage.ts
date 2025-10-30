@@ -219,6 +219,10 @@ export class DbStorage implements IStorage {
 
   // Search
   async searchText(query: string): Promise<Array<{ image: Image; ocrResult: OcrResult }>> {
+    // Use fuzzy search with pg_trgm similarity matching
+    // This allows finding variations with 1-3 letter differences
+    // For example: "jack" matches "back", "hack", "Jace", "black", etc.
+    
     // Omit imageData from search results for performance
     const results = await db
       .select({
@@ -241,14 +245,26 @@ export class DbStorage implements IStorage {
       })
       .from(ocrResults)
       .innerJoin(images, eq(images.id, ocrResults.imageId))
-      .where(ilike(ocrResults.consensusText, `%${query}%`))
-      .orderBy(desc(
-        sql`CASE 
-          WHEN ${ocrResults.consensusSource} = 'pytesseract_config1' THEN ${ocrResults.pytesseractConfidence}
-          WHEN ${ocrResults.consensusSource} = 'pytesseract_config2' THEN ${ocrResults.easyocrConfidence}
-          ELSE 0
-        END`
-      ));
+      .where(
+        or(
+          // Exact substring match (case-insensitive)
+          ilike(ocrResults.consensusText, `%${query}%`),
+          // Fuzzy match using similarity - threshold 0.2 for 1-3 letter variations
+          sql`similarity(${ocrResults.consensusText}, ${query}) > 0.2`
+        )
+      )
+      .orderBy(
+        // Order by: exact match first, then similarity, then confidence
+        desc(sql`CASE WHEN ${ocrResults.consensusText} ILIKE ${`%${query}%`} THEN 1 ELSE 0 END`),
+        desc(sql`similarity(${ocrResults.consensusText}, ${query})`),
+        desc(
+          sql`CASE 
+            WHEN ${ocrResults.consensusSource} = 'pytesseract_config1' THEN ${ocrResults.pytesseractConfidence}
+            WHEN ${ocrResults.consensusSource} = 'pytesseract_config2' THEN ${ocrResults.easyocrConfidence}
+            ELSE 0
+          END`
+        )
+      );
     
     return results;
   }
@@ -257,13 +273,20 @@ export class DbStorage implements IStorage {
   async getMonitoredSearches(): Promise<Array<MonitoredSearch & { resultCount: number }>> {
     const searches = await db.select().from(monitoredSearches).orderBy(desc(monitoredSearches.createdAt));
     
-    // For each search, count the number of results
+    // For each search, count the number of results using fuzzy matching
     const searchesWithCounts = await Promise.all(
       searches.map(async (search) => {
         const count = await db
           .select({ count: sql<number>`count(*)::int` })
           .from(ocrResults)
-          .where(ilike(ocrResults.consensusText, `%${search.searchTerm}%`));
+          .where(
+            or(
+              // Exact substring match (case-insensitive)
+              ilike(ocrResults.consensusText, `%${search.searchTerm}%`),
+              // Fuzzy match using similarity - threshold 0.2 for 1-3 letter variations
+              sql`similarity(${ocrResults.consensusText}, ${search.searchTerm}) > 0.2`
+            )
+          );
         
         return {
           ...search,
