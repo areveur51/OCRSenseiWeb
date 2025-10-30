@@ -193,7 +193,14 @@ export class DbStorage implements IStorage {
       })
       .from(ocrResults)
       .innerJoin(images, eq(images.id, ocrResults.imageId))
-      .where(ilike(ocrResults.consensusText, `%${query}%`));
+      .where(ilike(ocrResults.consensusText, `%${query}%`))
+      .orderBy(desc(
+        sql`CASE 
+          WHEN ${ocrResults.consensusSource} = 'pytesseract_config1' THEN ${ocrResults.pytesseractConfidence}
+          WHEN ${ocrResults.consensusSource} = 'pytesseract_config2' THEN ${ocrResults.easyocrConfidence}
+          ELSE 0
+        END`
+      ));
     
     return results;
   }
