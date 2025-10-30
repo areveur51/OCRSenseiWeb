@@ -17,7 +17,7 @@ export default function Search() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  const { data: results } = useQuery<SearchResult[]>({
+  const { data: results, isLoading } = useQuery<SearchResult[]>({
     queryKey: ["/api/search", debouncedQuery],
     queryFn: async () => {
       const response = await fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`, {
@@ -77,9 +77,22 @@ export default function Search() {
               Enter a search query to find text across all OCR-processed images
             </p>
           </div>
-        ) : debouncedQuery !== searchQuery ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <div className="ascii-art">SEARCHING...</div>
+        ) : isLoading || debouncedQuery !== searchQuery ? (
+          <div className="text-center py-12 space-y-4">
+            <pre className="ascii-art text-sm text-primary inline-block animate-pulse">
+{`╔══════════════════╗
+║  ▓▓▓▓▓▓▓▓▓▓▓▓▓  ║
+║  ▒▒▒▒▒▒▒▒▒▒▒▒▒  ║
+║  ░░░░░░░░░░░░░  ║
+║                  ║
+║   SEARCHING...   ║
+║                  ║
+║  [████████████]  ║
+╚══════════════════╝`}
+            </pre>
+            <p className="text-muted-foreground">
+              Scanning database for "{searchQuery}"_
+            </p>
           </div>
         ) : !results || results.length === 0 ? (
           <div className="text-center py-12 space-y-4">
