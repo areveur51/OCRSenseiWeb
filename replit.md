@@ -163,3 +163,52 @@ Successfully removed all filesystem dependencies after database migration:
 - Simplified deployment (no uploads directory needed)
 - All data in single PostgreSQL database
 - Easier backups and rollbacks
+
+### Directory and Image Management Features (October 30, 2025)
+Added comprehensive rename and delete functionality:
+
+**Directory Management:**
+- Rename directories via PATCH /api/directories/:id (updates name and path in database)
+- Delete directories with cascade deletion of images and OCR data
+- Frontend dropdown menu (MoreVertical icon) next to directory titles
+- Protection: "root" directory cannot be renamed or deleted
+- Confirmation dialogs before destructive operations
+
+**Image/File Management:**
+- Rename images via PATCH /api/images/:id (updates filename in database)
+- Frontend "Rename" button in image detail view with dialog interface
+- Automatic cache invalidation after rename operations
+- Works seamlessly with database-only storage (no filesystem operations)
+
+**Loading States:**
+- ASCII art loading animation when fetching subdirectory images
+- Animated terminal-style loading indicator matching Matrix theme
+- Shows before images are displayed in directory view
+
+### Performance Optimizations (October 30, 2025)
+Implemented multiple performance improvements for better scalability:
+
+**Database Indexes:**
+- Added index on `directories.projectId` for faster project filtering
+- Added index on `images.directoryId` for faster directory queries
+- Added index on `ocr_results.imageId` for faster OCR lookups
+- Added composite index on `processing_queue.imageId` and `processing_queue.status` for queue operations
+- All indexes applied via `drizzle-kit push` for safe schema synchronization
+
+**Query Optimizations:**
+- Modified `getImagesByDirectory()` to exclude `imageData` (large binary field) from list queries
+- Modified `searchText()` to exclude `imageData` from search results
+- Optimized `getProjectStats()` using CTE (Common Table Expression) for batched queries
+- Reduced database round-trips and network transfer for list operations
+
+**Frontend Caching:**
+- React Query configured with `staleTime: Infinity` (data never goes stale)
+- Added `gcTime: 30 minutes` to keep unused data in cache longer
+- Disabled `refetchOnWindowFocus` to prevent unnecessary refetches
+- Optimized cache invalidation strategies for mutations
+
+**Impact:**
+- Faster page loads (no large binary transfers in lists)
+- Reduced database queries (batch operations with CTEs)
+- Better user experience with intelligent caching
+- Scalable for larger datasets
