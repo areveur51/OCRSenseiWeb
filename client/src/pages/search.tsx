@@ -193,6 +193,23 @@ export default function Search() {
             <p className="text-muted-foreground">
               No results found for "{searchQuery}"
             </p>
+            {!isCurrentSearchMonitored && debouncedQuery && (
+              <div className="mt-4">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => addMonitoredSearch.mutate(debouncedQuery)}
+                  disabled={addMonitoredSearch.isPending}
+                  data-testid="button-add-monitored-search-no-results"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Monitor this search
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Track this term and see when results appear in future uploads
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <>
