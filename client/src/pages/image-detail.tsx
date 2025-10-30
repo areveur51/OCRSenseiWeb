@@ -1,61 +1,78 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useParams, useLocation } from "wouter";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { ImageViewer } from "@/components/image-viewer";
 import { OCRComparison } from "@/components/ocr-comparison";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Download, Play } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { Image, OcrResult } from "@shared/schema";
+
+interface ImageWithOcr extends Image {
+  ocrResult?: OcrResult;
+  processingStatus: string;
+}
 
 export default function ImageDetail() {
+  const params = useParams();
+  const imageId = params.id ? parseInt(params.id) : null;
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
 
-  const textRegions = [
-    {
-      id: "1",
-      text: "HISTORICAL DOCUMENT",
-      x: 15,
-      y: 10,
-      width: 35,
-      height: 4,
-    },
-    {
-      id: "2",
-      text: "This is a sample text extracted from the scanned document.",
-      x: 15,
-      y: 18,
-      width: 70,
-      height: 6,
-    },
-    {
-      id: "3",
-      text: "Date: March 15, 1995",
-      x: 15,
-      y: 28,
-      width: 25,
-      height: 4,
-    },
-    {
-      id: "4",
-      text: "Location: City Archives, Building 4",
-      x: 15,
-      y: 35,
-      width: 40,
-      height: 4,
-    },
-  ];
+  const { data: image } = useQuery<ImageWithOcr>({
+    queryKey: ["/api/images", imageId],
+    enabled: !!imageId,
+  });
+
+  const handleReprocess = async () => {
+    if (!imageId) return;
+
+    try {
+      await apiRequest("POST", `/api/images/${imageId}/process`);
+      queryClient.invalidateQueries({ queryKey: ["/api/images", imageId] });
+      
+      toast({
+        title: "Reprocessing Started",
+        description: "Image queued for OCR processing.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to queue image for processing",
+      });
+    }
+  };
+
+  const textRegions = image?.ocrResult?.boundingBoxes 
+    ? (image.ocrResult.boundingBoxes as any[]).map((box: any, idx: number) => ({
+        id: String(idx),
+        text: box.text,
+        x: (box.x / (image.width || 1000)) * 100,
+        y: (box.y / (image.height || 1000)) * 100,
+        width: (box.width / (image.width || 1000)) * 100,
+        height: (box.height / (image.height || 1000)) * 100,
+      }))
+    : [];
 
   return (
     <div className="space-y-6">
       <BreadcrumbNav
         items={[
-          { label: "Projects", href: "/projects" },
-          { label: "Historical Documents", href: "/projects/1" },
-          { label: "1920s", href: "/projects/1/1920s" },
-          { label: "document_001.jpg" },
+          { label: "Dashboard", href: "/" },
+          { label: "Back", href: "/" },
+          { label: image?.originalFilename || "Image" },
         ]}
-        onNavigate={(href) => console.log("Navigate:", href)}
+        onNavigate={(href) => setLocation(href)}
       />
 
-      <div className="flex gap-8">
-        <pre className="ascii-art text-xl hidden md:block">
+      <div className="flex items-start justify-between gap-6 flex-wrap">
+        <div className="flex gap-8">
+          <pre className="ascii-art text-xl hidden md:block">
 {`╔════════════════╗
 ║      SCAN      ║
 ║  ████████████  ║
@@ -63,65 +80,102 @@ export default function ImageDetail() {
 ║  ████████████  ║
 ╚════════════════╝
     [OCR]`}
-        </pre>
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            <span className="headline-highlight">document_001.jpg</span>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-2">
-            &gt; Dual OCR verification complete_
+          </pre>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              <span className="headline-highlight">{image?.originalFilename}</span>
+            </h1>
+            <p className="text-sm text-muted-foreground mt-2">
+              &gt; {image?.ocrResult 
+                ? "Dual OCR verification complete" 
+                : image?.processingStatus === "processing" 
+                  ? "Processing..." 
+                  : "Not processed"}_
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          {!image?.ocrResult && (
+            <Button onClick={handleReprocess} data-testid="button-process">
+              <Play className="h-4 w-4 mr-2" />
+              Process Now
+            </Button>
+          )}
+          {image?.ocrResult && (
+            <Button variant="outline" data-testid="button-download">
+              <Download className="h-4 w-4 mr-2" />
+              Export Text
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {!image ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <div className="ascii-art">LOADING...</div>
+        </div>
+      ) : !image.ocrResult ? (
+        <div className="text-center py-12 space-y-4">
+          <pre className="ascii-art text-sm text-muted-foreground inline-block">
+{`╔════════════╗
+║  PENDING   ║
+║    ⏸️⏸️    ║
+╚════════════╝`}
+          </pre>
+          <p className="text-muted-foreground">
+            {image.processingStatus === "processing" 
+              ? "OCR processing in progress..." 
+              : "This image has not been processed yet. Click 'Process Now' to start OCR extraction."}
           </p>
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-3">
+            <ImageViewer
+              textRegions={textRegions}
+              onRegionHover={setHoveredRegion}
+              imageUrl={`/api/images/${imageId}/file`}
+            />
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3">
-          <ImageViewer
-            textRegions={textRegions}
-            onRegionHover={setHoveredRegion}
-          />
+          <div className="lg:col-span-2 space-y-6">
+            <OCRComparison
+              pytesseractResult={{
+                method: "Pytesseract",
+                text: image.ocrResult.pytesseractText || "",
+                confidence: image.ocrResult.pytesseractConfidence || 0,
+              }}
+              easyOcrResult={{
+                method: "EasyOCR (Config 2)",
+                text: image.ocrResult.easyocrText || "",
+                confidence: image.ocrResult.easyocrConfidence || 0,
+              }}
+              consensus={image.ocrResult.consensusText || ""}
+            />
+
+            <Card className="p-6">
+              <h3 className="font-semibold text-base mb-4">
+                <span className="headline-highlight">TEXT REGIONS</span>
+              </h3>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {textRegions.map((region) => (
+                  <div
+                    key={region.id}
+                    className={`p-2 rounded text-sm hover-elevate cursor-pointer ${
+                      hoveredRegion === region.id ? "bg-primary/20" : ""
+                    }`}
+                    onMouseEnter={() => setHoveredRegion(region.id)}
+                    onMouseLeave={() => setHoveredRegion(null)}
+                  >
+                    {region.text}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
         </div>
-
-        <div className="lg:col-span-2 space-y-6">
-          <OCRComparison
-            pytesseractResult={{
-              method: "Pytesseract",
-              text: "HISTORICAL DOCUMENT\n\nThis is a sample text extracted from the scanned document.\n\nDate: March 15, 1995\nLocation: City Archives, Building 4",
-              confidence: 92,
-            }}
-            easyOcrResult={{
-              method: "EasyOCR",
-              text: "HISTORICAL DOCUMENT\n\nThis is a sample text extracted from the scanned document.\n\nDate: March 15, 1995\nLocation: City Archives, Building 4",
-              confidence: 96,
-            }}
-            consensus="HISTORICAL DOCUMENT\n\nThis is a sample text extracted from the scanned document.\n\nDate: March 15, 1995\nLocation: City Archives, Building 4"
-          />
-
-          <Card className="p-6">
-            <h3 className="font-semibold text-base mb-4">Text Regions</h3>
-            <div className="space-y-2">
-              {textRegions.map((region) => (
-                <div
-                  key={region.id}
-                  className={`
-                    p-3 rounded-md text-sm cursor-pointer transition-colors
-                    ${
-                      hoveredRegion === region.id
-                        ? "bg-primary/10 border border-primary"
-                        : "bg-muted hover:bg-muted/70"
-                    }
-                  `}
-                  onMouseEnter={() => setHoveredRegion(region.id)}
-                  onMouseLeave={() => setHoveredRegion(null)}
-                  data-testid={`text-region-${region.id}`}
-                >
-                  {region.text}
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
