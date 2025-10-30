@@ -7,18 +7,21 @@ import {
   ocrResults,
   processingQueue,
   monitoredSearches,
+  settings,
   type Project,
   type Directory,
   type Image,
   type OcrResult,
   type ProcessingQueue,
   type MonitoredSearch,
+  type Settings,
   type InsertProject,
   type InsertDirectory,
   type InsertImage,
   type InsertOcrResult,
   type InsertProcessingQueue,
   type InsertMonitoredSearch,
+  type UpdateSettings,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -61,6 +64,10 @@ export interface IStorage {
   getMonitoredSearches(): Promise<Array<MonitoredSearch & { resultCount: number }>>;
   createMonitoredSearch(search: InsertMonitoredSearch): Promise<MonitoredSearch>;
   deleteMonitoredSearch(id: number): Promise<boolean>;
+
+  // Settings
+  getSettings(): Promise<Settings>;
+  updateSettings(updates: UpdateSettings): Promise<Settings>;
 
   // Statistics
   getProjectStats(projectId: number): Promise<{
@@ -219,10 +226,19 @@ export class DbStorage implements IStorage {
 
   // Search
   async searchText(query: string): Promise<Array<{ image: Image; ocrResult: OcrResult }>> {
-    // Use fuzzy search with pg_trgm word_similarity matching
-    // This allows finding variations with 1-3 letter differences
-    // For example: "jack" matches "back", "hack", "Jace", "black", etc.
-    // word_similarity compares the query to words within the text, not the entire text
+    // Get current settings to determine fuzzy search threshold
+    const appSettings = await this.getSettings();
+    
+    // Map fuzzy search variations to word_similarity thresholds
+    // 1 char variation: stricter threshold (0.6) - very similar words only
+    // 2 char variation: moderate threshold (0.3) - allows more variations
+    // 3 char variation: looser threshold (0.2) - allows most variations
+    const thresholdMap: Record<number, number> = {
+      1: 0.6,
+      2: 0.3,
+      3: 0.2,
+    };
+    const threshold = thresholdMap[appSettings.fuzzySearchVariations] || 0.3;
     
     // Omit imageData from search results for performance
     const results = await db
@@ -250,9 +266,8 @@ export class DbStorage implements IStorage {
         or(
           // Exact substring match (case-insensitive)
           ilike(ocrResults.consensusText, `%${query}%`),
-          // Fuzzy match using word_similarity - threshold 0.3 for 1-3 letter variations
-          // word_similarity finds similar words within the text
-          sql`word_similarity(${query}, ${ocrResults.consensusText}) > 0.3`
+          // Fuzzy match using word_similarity with dynamic threshold
+          sql`word_similarity(${query}, ${ocrResults.consensusText}) > ${threshold}`
         )
       )
       .orderBy(
@@ -275,6 +290,15 @@ export class DbStorage implements IStorage {
   async getMonitoredSearches(): Promise<Array<MonitoredSearch & { resultCount: number }>> {
     const searches = await db.select().from(monitoredSearches).orderBy(desc(monitoredSearches.createdAt));
     
+    // Get current settings to determine fuzzy search threshold
+    const appSettings = await this.getSettings();
+    const thresholdMap: Record<number, number> = {
+      1: 0.6,
+      2: 0.3,
+      3: 0.2,
+    };
+    const threshold = thresholdMap[appSettings.fuzzySearchVariations] || 0.3;
+    
     // For each search, count the number of results using fuzzy matching
     const searchesWithCounts = await Promise.all(
       searches.map(async (search) => {
@@ -285,8 +309,8 @@ export class DbStorage implements IStorage {
             or(
               // Exact substring match (case-insensitive)
               ilike(ocrResults.consensusText, `%${search.searchTerm}%`),
-              // Fuzzy match using word_similarity - threshold 0.3 for 1-3 letter variations
-              sql`word_similarity(${search.searchTerm}, ${ocrResults.consensusText}) > 0.3`
+              // Fuzzy match using word_similarity with dynamic threshold
+              sql`word_similarity(${search.searchTerm}, ${ocrResults.consensusText}) > ${threshold}`
             )
           );
         
@@ -308,6 +332,32 @@ export class DbStorage implements IStorage {
   async deleteMonitoredSearch(id: number): Promise<boolean> {
     const result = await db.delete(monitoredSearches).where(eq(monitoredSearches.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Settings
+  async getSettings(): Promise<Settings> {
+    let [appSettings] = await db.select().from(settings).limit(1);
+    
+    // Create default settings if none exist
+    if (!appSettings) {
+      [appSettings] = await db.insert(settings).values({
+        fuzzySearchVariations: 2,
+      }).returning();
+    }
+    
+    return appSettings;
+  }
+
+  async updateSettings(updates: UpdateSettings): Promise<Settings> {
+    const currentSettings = await this.getSettings();
+    
+    const [updated] = await db
+      .update(settings)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(settings.id, currentSettings.id))
+      .returning();
+    
+    return updated;
   }
 
   // Statistics
