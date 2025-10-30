@@ -393,31 +393,26 @@ export default function ProjectDetail() {
         {/* Directory Tree Navigation */}
         {directories && directories.length > 1 && (
           <Card className="p-4 w-64 flex-shrink-0 self-start sticky top-6">
-            <div className="space-y-1">
-              <h3 className="font-semibold text-sm mb-3 text-muted-foreground uppercase tracking-wide">
-                Directories
-              </h3>
-              <div className="space-y-0.5">
-                {directories.map((dir) => {
-                  const isActive = dir.id === currentDirectory?.id;
-                  const Icon = isActive ? FolderOpen : Folder;
-                  return (
-                    <button
-                      key={dir.id}
-                      onClick={() => setLocation(`/project/${projectId}/${encodeURIComponent(dir.name)}`)}
-                      className={`w-full flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${
-                        isActive
-                          ? 'bg-primary/10 text-primary font-medium'
-                          : 'text-muted-foreground hover-elevate active-elevate-2'
-                      }`}
-                      data-testid={`nav-directory-${dir.id}`}
-                    >
-                      <Icon className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate text-left">{dir.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="space-y-0.5">
+              {directories.map((dir) => {
+                const isActive = dir.id === currentDirectory?.id;
+                const Icon = isActive ? FolderOpen : Folder;
+                return (
+                  <button
+                    key={dir.id}
+                    onClick={() => setLocation(`/project/${projectId}/${encodeURIComponent(dir.name)}`)}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${
+                      isActive
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'text-muted-foreground hover-elevate active-elevate-2'
+                    }`}
+                    data-testid={`nav-directory-${dir.id}`}
+                  >
+                    <Icon className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate text-left">{dir.name}</span>
+                  </button>
+                );
+              })}
             </div>
           </Card>
         )}

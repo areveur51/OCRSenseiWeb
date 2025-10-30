@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, desc, and, like, or, sql, inArray } from "drizzle-orm";
+import { eq, desc, and, like, ilike, or, sql, inArray } from "drizzle-orm";
 import {
   projects,
   directories,
@@ -193,7 +193,7 @@ export class DbStorage implements IStorage {
       })
       .from(ocrResults)
       .innerJoin(images, eq(images.id, ocrResults.imageId))
-      .where(like(ocrResults.consensusText, `%${query}%`));
+      .where(ilike(ocrResults.consensusText, `%${query}%`));
     
     return results;
   }
