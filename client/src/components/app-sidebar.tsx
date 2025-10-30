@@ -57,98 +57,107 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>
-            <span className="headline-highlight">NAVIGATION</span>
+            <span className="headline-highlight">DIRECTORY TREE</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => {
-                    onNavigate?.("/");
-                    console.log("Navigate to dashboard");
-                  }}
-                  data-testid="nav-dashboard"
-                >
-                  <Home className="h-4 w-4" />
-                  <span>Dashboard</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => {
-                    onNavigate?.("/search");
-                    console.log("Navigate to search");
-                  }}
-                  data-testid="nav-search"
-                >
-                  <Search className="h-4 w-4" />
-                  <span>Search</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+            <div className="font-mono text-sm space-y-0.5 px-2">
+              {/* Root navigation items */}
+              <div
+                className="flex items-center gap-2 py-1.5 px-2 hover-elevate active-elevate-2 cursor-pointer rounded"
+                onClick={() => {
+                  onNavigate?.("/");
+                  console.log("Navigate to dashboard");
+                }}
+                data-testid="nav-dashboard"
+              >
+                <span className="text-primary">├──</span>
+                <Home className="h-3.5 w-3.5 text-primary" />
+                <span>Dashboard</span>
+              </div>
+              
+              <div
+                className="flex items-center gap-2 py-1.5 px-2 hover-elevate active-elevate-2 cursor-pointer rounded"
+                onClick={() => {
+                  onNavigate?.("/search");
+                  console.log("Navigate to search");
+                }}
+                data-testid="nav-search"
+              >
+                <span className="text-primary">├──</span>
+                <Search className="h-3.5 w-3.5 text-primary" />
+                <span>Search</span>
+              </div>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>
-            <span className="headline-highlight">PROJECTS</span>
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {projects.map((project) => (
-                <div key={project.id}>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
+              {/* Projects tree */}
+              <div className="py-1.5 px-2">
+                <span className="text-primary">└──</span>
+                <span className="ml-2 text-muted-foreground">Projects/</span>
+              </div>
+
+              {projects.map((project, projectIndex) => {
+                const isLastProject = projectIndex === projects.length - 1;
+                const isExpanded = expandedProjects.has(project.id);
+                
+                return (
+                  <div key={project.id}>
+                    <div
+                      className="flex items-center gap-2 py-1.5 px-2 hover-elevate active-elevate-2 cursor-pointer rounded"
                       onClick={() => toggleProject(project.id)}
                       data-testid={`nav-project-${project.id}`}
                     >
-                      <ChevronRight
-                        className={`h-4 w-4 transition-transform ${
-                          expandedProjects.has(project.id) ? "rotate-90" : ""
-                        }`}
-                      />
-                      <FolderOpen className="h-4 w-4" />
-                      <span>{project.name}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  {expandedProjects.has(project.id) &&
-                    project.subdirectories.map((subdir) => (
-                      <SidebarMenuItem key={subdir} className="pl-4">
-                        <SidebarMenuButton
-                          onClick={() => {
-                            onNavigate?.(`/project/${project.id}/${subdir}`);
-                            console.log(
-                              `Navigate to ${project.name}/${subdir}`
-                            );
-                          }}
-                          data-testid={`nav-subdir-${subdir}`}
-                        >
-                          <span className="text-sm">{subdir}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                </div>
-              ))}
-            </SidebarMenu>
+                      <span className="text-primary ml-4">
+                        {isLastProject ? "    └──" : "    ├──"}
+                      </span>
+                      <span className="text-primary">{isExpanded ? "📂" : "📁"}</span>
+                      <span>{project.name}/</span>
+                    </div>
+
+                    {isExpanded &&
+                      project.subdirectories.map((subdir, subdirIndex) => {
+                        const isLastSubdir = subdirIndex === project.subdirectories.length - 1;
+                        
+                        return (
+                          <div
+                            key={subdir}
+                            className="flex items-center gap-2 py-1.5 px-2 hover-elevate active-elevate-2 cursor-pointer rounded"
+                            onClick={() => {
+                              onNavigate?.(`/project/${project.id}/${subdir}`);
+                              console.log(`Navigate to ${project.name}/${subdir}`);
+                            }}
+                            data-testid={`nav-subdir-${subdir}`}
+                          >
+                            <span className="text-primary ml-8">
+                              {isLastProject ? "        " : "    │   "}
+                              {isLastSubdir ? "└──" : "├──"}
+                            </span>
+                            <span className="text-sm">{subdir}</span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                );
+              })}
+            </div>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => {
-                onNavigate?.("/settings");
-                console.log("Navigate to settings");
-              }}
-              data-testid="nav-settings"
-            >
-              <Settings className="h-4 w-4" />
-              <span>Settings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <div className="font-mono text-sm px-2">
+          <div
+            className="flex items-center gap-2 py-1.5 px-2 hover-elevate active-elevate-2 cursor-pointer rounded"
+            onClick={() => {
+              onNavigate?.("/settings");
+              console.log("Navigate to settings");
+            }}
+            data-testid="nav-settings"
+          >
+            <span className="text-primary">└──</span>
+            <Settings className="h-3.5 w-3.5 text-primary" />
+            <span>Settings</span>
+          </div>
+        </div>
+        
         <div className="mt-3 pt-3 border-t">
           <pre className="ascii-art text-sm opacity-90 leading-tight">
 {`┌── SYSTEM ────┐
