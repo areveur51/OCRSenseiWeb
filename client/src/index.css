@@ -228,11 +228,16 @@
   
   /* ASCII art styling */
   .ascii-art {
-    font-family: "Courier New", Consolas, Monaco, monospace;
+    font-family: "Courier New", Consolas, Monaco, "Liberation Mono", monospace;
     white-space: pre;
-    line-height: 1.2;
+    line-height: 1;
+    letter-spacing: 0;
     color: hsl(var(--primary));
     display: block;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   
   /* Ensure ASCII art is visible */
