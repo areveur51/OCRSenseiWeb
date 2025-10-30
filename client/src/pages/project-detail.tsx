@@ -65,7 +65,64 @@ export default function ProjectDetail() {
   });
 
   const handleFileUpload = async (files: FileList | File[]) => {
-    if (!currentDirectory) return;
+    // If no directory exists, create a default one first
+    if (!currentDirectory) {
+      if (!projectId) {
+        toast({
+          variant: "destructive",
+          title: "Upload Failed",
+          description: "No project selected",
+        });
+        return;
+      }
+
+      try {
+        // Create a default "root" directory
+        const newDir: Directory = await apiRequest("POST", "/api/directories", {
+          projectId,
+          name: "root",
+          path: "/root",
+          parentId: null,
+        });
+
+        // Invalidate directories to refresh the list
+        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/directories`] });
+
+        // Wait a moment for the query to refresh
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Now proceed with upload using the new directory
+        const formData = new FormData();
+        Array.from(files).forEach((file) => {
+          formData.append("images", file);
+        });
+
+        setUploading(true);
+        await fetch(`/api/directories/${newDir.id}/upload`, {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+
+        queryClient.invalidateQueries({ queryKey: [`/api/directories/${newDir.id}/images`] });
+        
+        toast({
+          title: "Upload Successful",
+          description: `Created directory and uploaded ${files.length} image(s).`,
+        });
+        
+        setUploadDialogOpen(false);
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Upload Failed",
+          description: error.message || "Failed to create directory or upload images",
+        });
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
 
     setUploading(true);
     const formData = new FormData();
