@@ -42,8 +42,8 @@ export default function Search() {
         <pre className="ascii-art text-xl hidden md:block">
 {`╭───────────────╮
 │      ?        │
-│   ─────────────   │
-│  ═══════════  │
+│ ───────────── │
+│ ═══════════── │
 ╰───────────────╯
    [SEARCH]`}
         </pre>
