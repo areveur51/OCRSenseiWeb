@@ -67,5 +67,8 @@ Added HTML page parsing for URL downloads, enabling downloads from archives.gov 
   - Checks if URL is already a direct image (via HEAD request)
   - If HTML, parses page to find download links (e.g., links with "Download" text to S3 buckets)
   - Falls back gracefully to original URL on errors
-- Fixed filename derivation to use resolved image URL instead of HTML page URL, ensuring proper file extensions
-- Supports archives.gov URLs like `https://catalog.archives.gov/id/150268931?objectPage=39`
+- Filename handling:
+  - Uses actual JPG filename from the resolved image URL (no timestamp prefix)
+  - Decodes URL-encoded characters for cleaner filenames
+  - Example: `18-1487_US-MO_-26th-CAV--TRP-G-305-Cav--Hq-ca.-1-Jan-1916–31-Dec-1939_00664.jpg`
+- Supports archives.gov URLs like `https://catalog.archives.gov/id/150268931?objectPage=837`

@@ -192,9 +192,18 @@ export class FileStorageService {
 
     // Use the resolved image URL (not the original HTML page URL) for filename
     const urlPath = new URL(imageUrl).pathname;
-    const urlFilename = path.basename(urlPath);
-    const timestamp = Date.now();
-    const safeFilename = `${timestamp}_${urlFilename || `download.${extension}`}`;
+    let urlFilename = path.basename(urlPath);
+    
+    // Decode URL-encoded characters (e.g., %E2%80%93 becomes –)
+    try {
+      urlFilename = decodeURIComponent(urlFilename);
+    } catch (error) {
+      // If decoding fails, use the original filename
+      console.warn("Failed to decode URL filename:", error);
+    }
+    
+    // Use the actual filename from the URL without timestamp prefix
+    const safeFilename = urlFilename || `download_${Date.now()}.${extension}`;
     
     const filePath = path.join(dir, safeFilename);
     const relativePath = path.join(subdirectory, safeFilename);
