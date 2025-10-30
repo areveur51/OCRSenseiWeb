@@ -236,9 +236,9 @@ export default function Settings() {
         <Card className="p-6">
           <div className="flex items-start gap-3 mb-6">
             <pre className="ascii-art text-sm opacity-80">
-{`┌───────┐
-│  ⚡  │
-└───────┘`}
+{`┌─────────┐
+│  PERF   │
+└─────────┘`}
             </pre>
             <div>
               <h2 className="text-lg font-semibold">

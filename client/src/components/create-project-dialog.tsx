@@ -16,12 +16,21 @@ import { Plus } from "lucide-react";
 
 interface CreateProjectDialogProps {
   onCreateProject?: (data: { name: string; description: string }) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CreateProjectDialog({ onCreateProject }: CreateProjectDialogProps) {
-  const [open, setOpen] = useState(false);
+export function CreateProjectDialog({ 
+  onCreateProject, 
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange 
+}: CreateProjectDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange || setInternalOpen;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,12 +43,14 @@ export function CreateProjectDialog({ onCreateProject }: CreateProjectDialogProp
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button data-testid="button-create-project">
-          <Plus className="h-4 w-4 mr-2" />
-          New Project
-        </Button>
-      </DialogTrigger>
+      {controlledOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button data-testid="button-create-project">
+            <Plus className="h-4 w-4 mr-2" />
+            New Project
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>

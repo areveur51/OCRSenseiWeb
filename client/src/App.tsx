@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import Dashboard from "@/pages/dashboard";
+import Projects from "@/pages/projects";
 import ProjectDetail from "@/pages/project-detail";
 import ImageDetail from "@/pages/image-detail";
 import Search from "@/pages/search";
@@ -18,6 +19,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/projects" component={Projects} />
       <Route path="/project/:id/:subdir" component={ProjectDetail} />
       <Route path="/image/:id" component={ImageDetail} />
       <Route path="/search" component={Search} />

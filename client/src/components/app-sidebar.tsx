@@ -110,9 +110,23 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
               </div>
 
               {/* Projects tree */}
+              <div
+                className="flex items-center gap-2 py-1.5 px-2 hover-elevate active-elevate-2 cursor-pointer rounded"
+                onClick={() => {
+                  setLocation("/projects");
+                  onNavigate?.("/projects");
+                }}
+                data-testid="nav-projects"
+              >
+                <span className="text-primary">├──</span>
+                <FolderOpen className="h-3.5 w-3.5 text-primary" />
+                <span>Projects</span>
+              </div>
+
+              {/* Projects tree detail */}
               <div className="py-1.5 px-2">
                 <span className="text-primary">└──</span>
-                <span className="ml-2 text-muted-foreground">Projects/</span>
+                <span className="ml-2 text-muted-foreground">Browse/</span>
               </div>
 
               {projects.map((project, projectIndex) => {
