@@ -54,18 +54,16 @@ Preferred communication style: Simple, everyday language.
 
 **ORM**: Drizzle ORM for type-safe database operations with schema-first approach
 
-**Schema Design**:
-- Users table with auto-generated UUIDs
+**Schema Design** (implemented):
+- Projects table: Stores project metadata with timestamps
+- Directories table: Hierarchical structure with project references and parent/child relationships
+- Images table: File metadata, source info (upload/URL), processing status
+- OCR Results table: Dual verification results (pytesseract config1 vs config2), consensus text, bounding boxes
+- Processing Queue table: Asynchronous batch processing with status tracking, priority, attempts, and error handling
 - Validation using Zod schemas derived from Drizzle table definitions
 - Migration support through drizzle-kit
 
 **Connection Strategy**: Connection pooling via Neon's serverless pool for efficient database access
-
-**Future Schema Expectations**: The application will need tables for:
-- Projects (with subdirectories)
-- Images (with file paths, processing status, confidence scores)
-- OCR results (pytesseract and EasyOCR outputs)
-- Extracted text regions (with coordinates for highlighting)
 
 ### Authentication and Authorization
 
@@ -82,10 +80,12 @@ Preferred communication style: Simple, everyday language.
 - shadcn/ui component library in "new-york" style
 - Tailwind CSS for utility-first styling with custom theme variables
 
-**OCR Processing** (anticipated):
-- pytesseract: Python-based OCR using Tesseract engine
-- EasyOCR: Deep learning-based OCR for comparison/verification
-- Dual verification approach comparing results from both engines for consensus
+**OCR Processing** (implemented):
+- pytesseract: Python-based OCR using Tesseract engine with dual-pass verification
+- Two configuration modes (PSM 6 and PSM 3) for consensus-based text extraction
+- Higher confidence result selected as consensus
+- Note: EasyOCR skipped due to platform dependency conflicts on NixOS
+- Bounding box extraction for text region highlighting
 
 **Form Handling**:
 - React Hook Form with Zod resolver for type-safe form validation
@@ -102,6 +102,16 @@ Preferred communication style: Simple, everyday language.
 - nanoid for generating unique IDs
 - wouter for lightweight client-side routing
 
-**Image Handling** (anticipated): The application will need image upload, storage, and thumbnail generation capabilities for processing scanned documents.
+**Image Handling** (implemented): 
+- File upload with multer (17MB limit per image)
+- Supported formats: JPG, PNG, TIFF, PDF
+- Batch upload support (up to 20 files simultaneously)
+- URL download feature for archives.gov and similar sources
+- Metadata extraction (filename, size, format, dimensions)
 
-**File Storage Strategy**: Images likely stored on filesystem or cloud storage (e.g., S3) with database references, though this is not yet implemented.
+**File Storage Strategy** (implemented): 
+- Local filesystem storage in uploads/ directory
+- Organized by project and directory: uploads/project_{id}/dir_{id}/
+- Database stores file paths, metadata, and processing status
+- Dropbox integration deferred: User dismissed integration setup - can be added later for cloud storage
+- Note for future: Replit Dropbox connector available at connector:ccfg_dropbox_01K49RKF1K3H5YEV4A3QXW28XT

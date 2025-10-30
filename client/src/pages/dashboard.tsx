@@ -1,47 +1,60 @@
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { FolderOpen, FileText, CheckCircle2, TrendingUp, Plus } from "lucide-react";
+import { FolderOpen, FileText, CheckCircle2, TrendingUp } from "lucide-react";
 import { StatsCard } from "@/components/stats-card";
 import { ProjectCard } from "@/components/project-card";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { SearchBar } from "@/components/search-bar";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import type { Project } from "@shared/schema";
+
+interface ProjectWithStats extends Project {
+  totalImages: number;
+  processedImages: number;
+  totalDirectories: number;
+}
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
-  const [projects] = useState([
-    {
-      id: "1",
-      name: "Historical Documents",
-      totalImages: 450,
-      processedImages: 320,
-      subdirectoryCount: 12,
-      lastUpdated: "2 hours ago",
-    },
-    {
-      id: "2",
-      name: "Legal Archives",
-      totalImages: 890,
-      processedImages: 890,
-      subdirectoryCount: 8,
-      lastUpdated: "1 day ago",
-    },
-    {
-      id: "3",
-      name: "Medical Records",
-      totalImages: 1250,
-      processedImages: 425,
-      subdirectoryCount: 15,
-      lastUpdated: "3 hours ago",
-    },
-    {
-      id: "4",
-      name: "Business Correspondence",
-      totalImages: 320,
-      processedImages: 120,
-      subdirectoryCount: 6,
-      lastUpdated: "5 days ago",
-    },
-  ]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  const { data: projects, isLoading } = useQuery<ProjectWithStats[]>({
+    queryKey: ["/api/projects"],
+  });
+
+  const handleCreateProject = async (data: { name: string; description: string }) => {
+    try {
+      await apiRequest("POST", "/api/projects", data);
+
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      
+      toast({
+        title: "Project Created",
+        description: `Project "${data.name}" has been created successfully.`,
+      });
+      
+      setCreateDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to create project",
+      });
+    }
+  };
+
+  const filteredProjects = projects?.filter((p) =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
+
+  const totalProjects = projects?.length || 0;
+  const totalImages = projects?.reduce((sum, p) => sum + p.totalImages, 0) || 0;
+  const processedImages = projects?.reduce((sum, p) => sum + p.processedImages, 0) || 0;
+  const avgProgress = totalImages > 0 ? Math.round((processedImages / totalImages) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -75,33 +88,35 @@ export default function Dashboard() {
           </div>
         </div>
         <CreateProjectDialog
-          onCreateProject={(data) => console.log("New project:", data)}
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+          onCreateProject={handleCreateProject}
         />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Total Projects"
-          value={projects.length}
+          value={totalProjects}
           icon={FolderOpen}
-          trend={{ value: "2 this week", isPositive: true }}
+          trend={{ value: `${totalProjects} active`, isPositive: true }}
         />
         <StatsCard
-          title="Images Processed"
-          value="3,247"
+          title="Total Images"
+          value={totalImages.toLocaleString()}
           icon={FileText}
-          description="Last 30 days"
+          description="All projects"
         />
         <StatsCard
-          title="Completed"
-          value="2,891"
+          title="Processed"
+          value={processedImages.toLocaleString()}
           icon={CheckCircle2}
         />
         <StatsCard
-          title="Avg. Confidence"
-          value="94.2%"
+          title="Progress"
+          value={`${avgProgress}%`}
           icon={TrendingUp}
-          trend={{ value: "3.1% from last month", isPositive: true }}
+          trend={{ value: `${processedImages}/${totalImages} complete`, isPositive: avgProgress > 50 }}
         />
       </div>
 
@@ -113,20 +128,64 @@ export default function Dashboard() {
           <div className="w-full md:w-96">
             <SearchBar
               placeholder="Search projects..."
-              onSearch={(q) => console.log("Search projects:", q)}
+              onSearch={setSearchQuery}
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              {...project}
-              onClick={() => setLocation(`/project/${project.id}/overview`)}
-            />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <div className="ascii-art">LOADING...</div>
+          </div>
+        ) : filteredProjects.length === 0 ? (
+          <div className="text-center py-12 space-y-4">
+            <pre className="ascii-art text-sm text-muted-foreground inline-block">
+{`╔════════════╗
+║    ∅∅∅∅    ║
+║  NO DATA   ║
+╚════════════╝`}
+            </pre>
+            <p className="text-muted-foreground">
+              {searchQuery ? "No projects match your search" : "No projects yet. Create one to get started!"}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProjects.map((project) => {
+              const progress = project.totalImages > 0 
+                ? Math.round((project.processedImages / project.totalImages) * 100) 
+                : 0;
+              
+              const updatedDate = new Date(project.updatedAt);
+              const now = new Date();
+              const diffMs = now.getTime() - updatedDate.getTime();
+              const diffMins = Math.floor(diffMs / 60000);
+              const diffHours = Math.floor(diffMs / 3600000);
+              const diffDays = Math.floor(diffMs / 86400000);
+              
+              let lastUpdated = "just now";
+              if (diffMins < 60 && diffMins > 0) {
+                lastUpdated = `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
+              } else if (diffHours < 24) {
+                lastUpdated = `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+              } else if (diffDays > 0) {
+                lastUpdated = `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+              }
+              
+              return (
+                <ProjectCard
+                  key={project.id}
+                  name={project.name}
+                  totalImages={project.totalImages}
+                  processedImages={project.processedImages}
+                  subdirectoryCount={project.totalDirectories}
+                  lastUpdated={lastUpdated}
+                  onClick={() => setLocation(`/project/${project.id}/root`)}
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
