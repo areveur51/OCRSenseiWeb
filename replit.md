@@ -15,7 +15,7 @@ The frontend is built with React and TypeScript using Vite, leveraging `shadcn/u
 The backend is an Express.js application with TypeScript, providing a RESTful API for project, directory, image, and search functionalities. It handles file uploads via Multer (17MB limit, various image/PDF formats) and supports URL-based image downloads.
 
 ### Data Storage
-The application utilizes a PostgreSQL database, accessed via Neon's serverless driver and managed with Drizzle ORM. The schema includes tables for `projects`, `directories`, `images`, `ocr_results`, and `processing_queue`. Zod schemas ensure type-safe validation. Images are stored as binary data (`bytea`) directly in PostgreSQL.
+The application utilizes a PostgreSQL database, accessed via Neon's serverless driver and managed with Drizzle ORM. The schema includes tables for `projects`, `directories`, `images`, `ocr_results`, `processing_queue`, `monitored_searches`, and `settings`. Zod schemas ensure type-safe validation. Images are stored as binary data (`bytea`) directly in PostgreSQL.
 
 ### OCR Processing
 OCR processing is managed by a Python-based service using `pytesseract` with a dual-pass verification strategy. It employs two different Tesseract configurations (PSM 6 and PSM 3), selecting the result with higher confidence. Word-level bounding boxes are extracted for frontend highlighting. Processing is asynchronous, with images queued and processed in batches by a background worker.
@@ -24,7 +24,11 @@ OCR processing is managed by a Python-based service using `pytesseract` with a d
 Images are stored as binary data (bytea) in PostgreSQL within the `imageData` column of the `images` table, providing data integrity and simplified backups. The system maintains filesystem fallback for legacy images.
 
 ### System Enhancements
-- **Search:** Features fuzzy matching using PostgreSQL pg_trgm extension with word_similarity function. Allows 1-3 letter variations (e.g., "jack" matches "back", "hack", "Jace", "black"). Results are ordered by: exact matches first, then fuzzy matches by similarity score, then by OCR confidence. Search queries are case-insensitive and properly encoded.
+- **Search:** Features fuzzy matching using PostgreSQL pg_trgm extension with word_similarity function. Character variation tolerance is configurable (1-3 letter differences). Results are ordered by: exact matches first, then fuzzy matches by similarity score, then by OCR confidence. Search queries are case-insensitive and properly encoded.
+- **Settings:** Configurable fuzzy search behavior via dedicated Settings page. Users can select fuzzy search variation tolerance (1, 2, or 3 character differences, default: 2). Settings are stored in a singleton database table and dynamically adjust similarity thresholds:
+  - 1 character: 0.6 threshold (strict matching)
+  - 2 characters: 0.3 threshold (balanced, default)
+  - 3 characters: 0.2 threshold (loose matching)
 - **Performance:** Database indexes are used for faster queries, and large binary fields like `imageData` are excluded from list queries. Frontend caching is optimized with React Query (staleTime: Infinity, gcTime: 30 minutes).
 - **Monitoring:** A feature allows monitoring specific search terms, tracking and displaying their result counts, and quickly re-running searches. Monitored searches also use fuzzy matching.
 - **Management:** Comprehensive features for renaming and deleting directories and images, including cascade deletion for directories.
