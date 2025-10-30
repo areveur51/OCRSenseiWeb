@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { Switch as ToggleSwitch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { 
   Settings as SettingsIcon, 
@@ -65,7 +65,7 @@ export default function Settings() {
                   Enable Tesseract OCR processing
                 </p>
               </div>
-              <Switch 
+              <ToggleSwitch 
                 id="pytesseract-enabled" 
                 defaultChecked 
                 data-testid="switch-pytesseract"
@@ -81,7 +81,7 @@ export default function Settings() {
                   Enable deep learning OCR processing
                 </p>
               </div>
-              <Switch 
+              <ToggleSwitch 
                 id="easyocr-enabled" 
                 defaultChecked 
                 data-testid="switch-easyocr"
@@ -296,7 +296,7 @@ export default function Settings() {
                   Start OCR immediately after upload
                 </p>
               </div>
-              <Switch 
+              <ToggleSwitch 
                 id="auto-process" 
                 data-testid="switch-auto-process"
               />
