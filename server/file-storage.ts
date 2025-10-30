@@ -236,12 +236,9 @@ export class FileStorageService {
   }
 
   async deleteFile(filePath: string): Promise<void> {
-    const fullPath = path.join(UPLOAD_DIR, filePath);
-    try {
-      await fs.unlink(fullPath);
-    } catch (error) {
-      console.error(`Failed to delete file ${filePath}:`, error);
-    }
+    // Database storage only - filesystem cleanup skipped
+    // Silently ignore since files may not exist on disk
+    return;
   }
 
   getFilePath(relativePath: string): string {
@@ -249,12 +246,9 @@ export class FileStorageService {
   }
 
   async deleteDirectory(subdirectory: string): Promise<void> {
-    const dir = path.join(UPLOAD_DIR, subdirectory);
-    try {
-      await fs.rm(dir, { recursive: true, force: true });
-    } catch (error) {
-      console.error(`Failed to delete directory ${subdirectory}:`, error);
-    }
+    // Database storage only - filesystem cleanup skipped
+    // Silently ignore since directories may not exist on disk
+    return;
   }
 }
 

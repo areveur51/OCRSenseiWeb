@@ -78,12 +78,13 @@ export default function ProjectDetail() {
 
       try {
         // Create a default "root" directory
-        const newDir = await apiRequest("POST", "/api/directories", {
+        const response = await apiRequest("POST", "/api/directories", {
           projectId,
           name: "root",
           path: "/root",
           parentId: null,
-        }) as Directory;
+        });
+        const newDir = await response.json() as Directory;
 
         // Invalidate directories to refresh the list
         await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/directories`] });
