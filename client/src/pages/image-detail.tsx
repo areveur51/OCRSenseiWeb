@@ -24,7 +24,7 @@ export default function ImageDetail() {
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
 
   const { data: image } = useQuery<ImageWithOcr>({
-    queryKey: ["/api/images", imageId],
+    queryKey: [`/api/images/${imageId}`],
     enabled: !!imageId,
   });
 
@@ -33,7 +33,7 @@ export default function ImageDetail() {
 
     try {
       await apiRequest("POST", `/api/images/${imageId}/process`);
-      queryClient.invalidateQueries({ queryKey: ["/api/images", imageId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/images/${imageId}`] });
       
       toast({
         title: "Reprocessing Started",

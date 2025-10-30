@@ -48,19 +48,19 @@ export default function ProjectDetail() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: project } = useQuery<ProjectWithStats>({
-    queryKey: ["/api/projects", projectId],
+    queryKey: [`/api/projects/${projectId}`],
     enabled: !!projectId,
   });
 
   const { data: directories } = useQuery<Directory[]>({
-    queryKey: ["/api/projects", projectId, "directories"],
+    queryKey: [`/api/projects/${projectId}/directories`],
     enabled: !!projectId,
   });
 
   const currentDirectory = directories?.find(d => d.name === directoryParam) || directories?.[0];
 
   const { data: images } = useQuery<ImageWithOcr[]>({
-    queryKey: ["/api/directories", currentDirectory?.id, "images"],
+    queryKey: [`/api/directories/${currentDirectory?.id}/images`],
     enabled: !!currentDirectory?.id,
   });
 
@@ -81,7 +81,7 @@ export default function ProjectDetail() {
         credentials: "include",
       });
 
-      queryClient.invalidateQueries({ queryKey: ["/api/directories", currentDirectory.id, "images"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/directories/${currentDirectory.id}/images`] });
       
       toast({
         title: "Upload Successful",
@@ -108,7 +108,7 @@ export default function ProjectDetail() {
         url: downloadUrl.trim(),
       });
 
-      queryClient.invalidateQueries({ queryKey: ["/api/directories", currentDirectory.id, "images"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/directories/${currentDirectory.id}/images`] });
       
       toast({
         title: "Download Started",
@@ -137,7 +137,7 @@ export default function ProjectDetail() {
         parentId: null,
       });
 
-      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "directories"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/directories`] });
       
       toast({
         title: "Directory Created",
@@ -167,7 +167,7 @@ export default function ProjectDetail() {
         )
       );
 
-      queryClient.invalidateQueries({ queryKey: ["/api/directories", currentDirectory?.id, "images"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/directories/${currentDirectory?.id}/images`] });
       
       toast({
         title: "Processing Started",
