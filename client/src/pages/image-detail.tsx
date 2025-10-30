@@ -54,17 +54,18 @@ export default function ImageDetail() {
         onNavigate={(href) => console.log("Navigate:", href)}
       />
 
-      <div className="flex gap-6">
-        <pre className="ascii-art text-sm hidden md:block">
-{`  ╔════════╗
-  ║  SCAN  ║
-  ║ ██████ ║
-  ║ ██████ ║
-  ╚════════╝
-   [OCR]`}
+      <div className="flex gap-8">
+        <pre className="ascii-art text-xl leading-tight hidden md:block">
+{`╔══════════════╗
+║    SCAN      ║
+║ ████████████ ║
+║ ████████████ ║
+║ ████████████ ║
+╚══════════════╝
+    [OCR]`}
         </pre>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-3xl font-semibold tracking-tight">
             <span className="headline-highlight">document_001.jpg</span>
           </h1>
           <p className="text-sm text-muted-foreground mt-2">

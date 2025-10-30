@@ -12,6 +12,19 @@ interface StatsCardProps {
   };
 }
 
+const iconMap: Record<string, string> = {
+  "Total Projects": `╔═╗
+║▓║
+╚═╝`,
+  "Images Processed": `┌─┐
+│▓│
+└─┘`,
+  "Completed": `[✓]
+▓▓▓`,
+  "Avg. Confidence": `╱▔╲
+▓▓▓`,
+};
+
 export function StatsCard({
   title,
   value,
@@ -19,12 +32,14 @@ export function StatsCard({
   icon: Icon,
   trend,
 }: StatsCardProps) {
+  const asciiIcon = iconMap[title];
+  
   return (
     <Card className="p-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-start justify-between gap-4">
         <div className="space-y-1 flex-1">
-          <p className="text-sm text-muted-foreground">{title}</p>
-          <p className="text-2xl font-semibold tracking-tight" data-testid={`text-stats-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+          <p className="text-sm text-muted-foreground uppercase tracking-wide">{title}</p>
+          <p className="text-3xl font-semibold tracking-tight font-mono" data-testid={`text-stats-${title.toLowerCase().replace(/\s+/g, '-')}`}>
             {value}
           </p>
           {description && (
@@ -40,9 +55,11 @@ export function StatsCard({
             </p>
           )}
         </div>
-        <div className="p-3 rounded-md bg-primary/10">
-          <Icon className="h-6 w-6 text-primary" />
-        </div>
+        {asciiIcon && (
+          <pre className="ascii-art text-sm leading-tight opacity-80">
+{asciiIcon}
+          </pre>
+        )}
       </div>
     </Card>
   );

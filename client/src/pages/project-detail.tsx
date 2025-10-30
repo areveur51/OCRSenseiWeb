@@ -63,17 +63,18 @@ export default function ProjectDetail() {
       />
 
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex gap-6">
-          <pre className="ascii-art text-sm hidden md:block">
-{`  ┌───────┐
-  │ █████ │
-  │ █████ │
-  │ █████ │
-  └───────┘
-  [FOLDER]`}
+        <div className="flex gap-8">
+          <pre className="ascii-art text-xl leading-tight hidden md:block">
+{`┌─────────────┐
+│ ███████████ │
+│ ███████████ │
+│ ███████████ │
+│ ███████████ │
+└─────────────┘
+   [FOLDER]`}
           </pre>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="text-3xl font-semibold tracking-tight">
               <span className="headline-highlight">Historical Documents / 1920s</span>
             </h1>
             <p className="text-sm text-muted-foreground mt-2">

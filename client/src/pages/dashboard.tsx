@@ -44,17 +44,27 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-6 flex-wrap">
-        <div className="flex gap-6">
-          <pre className="ascii-art text-sm hidden md:block">
-{`  ╔═════════╗
-  ║ ████████║
-  ║ ████████║
-  ║ ████████║
-  ╚═════════╝
+        <div className="flex gap-8">
+          <pre className="ascii-art text-xl leading-tight hidden lg:block">
+{`╔═══════════════╗
+║ ████████████ ║
+║ ████████████ ║
+║ ████████████ ║
+║ ████████████ ║
+║ ████████████ ║
+╚═══════════════╝
+  [MAIN SERVER]`}
+          </pre>
+          <pre className="ascii-art text-base leading-tight hidden md:block lg:hidden">
+{`╔═══════════╗
+║ ████████ ║
+║ ████████ ║
+║ ████████ ║
+╚═══════════╝
   [SERVER]`}
           </pre>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="text-3xl font-semibold tracking-tight">
               <span className="headline-highlight">SYSTEM DASHBOARD</span>
             </h1>
             <p className="text-sm text-muted-foreground mt-2">

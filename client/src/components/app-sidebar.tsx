@@ -42,9 +42,10 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b">
-        <pre className="ascii-art text-sm mb-2">
+        <pre className="ascii-art text-base mb-3 leading-tight">
 {`╔═══════════════╗
-║ OCR  SYSTEM   ║
+║  OCR SYSTEM   ║
+║ ████████████  ║
 ║ ════════════  ║
 ╚═══════════════╝`}
         </pre>
@@ -149,11 +150,12 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
           </SidebarMenuItem>
         </SidebarMenu>
         <div className="mt-3 pt-3 border-t">
-          <pre className="ascii-art text-xs opacity-80">
-{`┌─ SYSTEM ─────┐
-│ Online    ✓  │
-│ Uptime: 99.9%│
-│ Mode: Active_│
+          <pre className="ascii-art text-sm opacity-90 leading-tight">
+{`┌── SYSTEM ────┐
+│  ████  ✓     │
+│ Online       │
+│ Up: 99.9%    │
+│ Active_      │
 └──────────────┘`}
           </pre>
         </div>

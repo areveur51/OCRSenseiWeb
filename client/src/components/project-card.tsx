@@ -29,10 +29,13 @@ export function ProjectCard({
     >
       <div className="flex items-start justify-between gap-4 mb-4">
         <div className="flex items-start gap-3">
-          <div className="p-2 rounded-md bg-primary/10">
-            <FolderOpen className="h-5 w-5 text-primary" />
-          </div>
-          <div>
+          <pre className="ascii-art text-base leading-tight opacity-90">
+{`┌─────┐
+│ ▓▓▓ │
+│ ▓▓▓ │
+└─────┘`}
+          </pre>
+          <div className="flex-1">
             <h3 className="font-semibold text-base" data-testid={`text-project-name-${name.toLowerCase().replace(/\s+/g, '-')}`}>
               {name}
             </h3>
