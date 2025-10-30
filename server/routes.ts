@@ -239,8 +239,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Image not found" });
       }
       
-      const filePath = fileStorage.getFilePath(image.filePath);
-      res.sendFile(filePath);
+      // Prefer database storage, fall back to filesystem
+      if (image.imageData) {
+        const mimeType = {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'tiff': 'image/tiff',
+          'tif': 'image/tiff',
+          'pdf': 'application/pdf',
+        }[image.format.toLowerCase()] || 'application/octet-stream';
+        
+        res.set('Content-Type', mimeType);
+        res.set('Content-Length', image.imageData.length.toString());
+        res.send(image.imageData);
+      } else if (image.filePath) {
+        // Fallback to filesystem for legacy images
+        const filePath = fileStorage.getFilePath(image.filePath);
+        res.sendFile(filePath);
+      } else {
+        res.status(404).json({ error: "Image data not found" });
+      }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -301,6 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           height: fileResult.height || null,
           sourceType: "upload",
           sourceUrl: null,
+          imageData: file.buffer,
         });
         
         await storage.createQueueItem({
@@ -357,6 +377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         height: fileResult.height || null,
         sourceType: "url",
         sourceUrl: url,
+        imageData: fileResult.buffer,
       });
       
       await storage.createQueueItem({

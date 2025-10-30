@@ -184,20 +184,22 @@ export class FileStorageService {
   async downloadFromUrl(
     url: string,
     subdirectory: string
-  ): Promise<FileUploadResult> {
+  ): Promise<FileUploadResult & { buffer: Buffer }> {
     const dir = await this.ensureUploadDir(subdirectory);
     
     // First, try to extract the actual image URL if this is an HTML page
     const imageUrl = await this.extractImageUrl(url);
     
+    // Download to buffer instead of stream
     const response = await axios({
       method: "get",
       url: imageUrl,
-      responseType: "stream",
+      responseType: "arraybuffer",
       maxContentLength: MAX_FILE_SIZE,
       maxBodyLength: MAX_FILE_SIZE,
     });
 
+    const buffer = Buffer.from(response.data);
     const contentType = response.headers["content-type"] || "";
     let extension = "jpg";
     
@@ -223,16 +225,15 @@ export class FileStorageService {
     const filePath = path.join(dir, safeFilename);
     const relativePath = path.join(subdirectory, safeFilename);
 
-    const writer = createWriteStream(filePath);
-    await pipeline(response.data, writer);
-
-    const stats = await fs.stat(filePath);
+    // Write buffer to file
+    await fs.writeFile(filePath, buffer);
 
     return {
       filename: safeFilename,
       filePath: relativePath,
-      fileSize: stats.size,
+      fileSize: buffer.length,
       format: extension,
+      buffer: buffer,
     };
   }
 
