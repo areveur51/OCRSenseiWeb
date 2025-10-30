@@ -177,14 +177,14 @@ export default function Projects() {
           {projects.map((project) => {
             const progress =
               project.totalImages > 0
-                ? (project.processedImages / project.totalImages) * 100
+                ? Math.min((project.processedImages / project.totalImages) * 100, 100)
                 : 0;
 
             return (
               <Card key={project.id} className="p-6" data-testid={`card-project-${project.id}`}>
                 <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex items-start gap-3 flex-1">
-                    <pre className="ascii-art text-base opacity-90">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <pre className="ascii-art text-base opacity-90 flex-shrink-0">
 {`┌───────┐
 │  ▓▓▓  │
 │  ▓▓▓  │
@@ -197,7 +197,7 @@ export default function Projects() {
                       >
                         {project.name}
                       </h3>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-muted-foreground mt-1 truncate">
                         {project.totalDirectories}{" "}
                         {project.totalDirectories === 1 ? "directory" : "directories"}
                       </p>
@@ -206,23 +206,23 @@ export default function Projects() {
                 </div>
 
                 <div className="space-y-3 mb-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Images</span>
-                    <span className="font-medium">
+                  <div className="flex items-center justify-between text-sm gap-2">
+                    <span className="text-muted-foreground flex-shrink-0">Images</span>
+                    <span className="font-medium font-mono truncate">
                       {project.processedImages} / {project.totalImages}
                     </span>
                   </div>
 
                   <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Progress</span>
-                      <span className="font-medium">{Math.round(progress)}%</span>
+                    <div className="flex items-center justify-between text-xs gap-2">
+                      <span className="text-muted-foreground flex-shrink-0">Progress</span>
+                      <span className="font-medium font-mono">{Math.round(progress)}%</span>
                     </div>
 
                     <div className="w-full bg-secondary rounded-full h-2">
                       <div
                         className="bg-primary h-2 rounded-full transition-all"
-                        style={{ width: `${progress}%` }}
+                        style={{ width: `${Math.min(progress, 100)}%` }}
                       />
                     </div>
                   </div>

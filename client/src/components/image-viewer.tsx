@@ -82,20 +82,21 @@ export function ImageViewer({
         </Button>
       </div>
 
-      <div className="relative bg-muted/20 overflow-auto" style={{ height: "600px" }}>
+      <div className="relative bg-muted/20 overflow-auto flex items-center justify-center" style={{ height: "600px" }}>
         <div
-          className="relative inline-block min-w-full min-h-full flex items-center justify-center"
+          className="relative"
           style={{
             transform: `scale(${zoom / 100})`,
-            transformOrigin: "center",
+            transformOrigin: "center center",
+            transition: "transform 0.2s ease-out",
           }}
         >
           {imageUrl ? (
-            <div className="relative">
+            <div className="relative inline-block">
               <img
                 src={imageUrl}
                 alt="Scanned document"
-                className="max-w-none"
+                className="max-h-[580px] w-auto object-contain"
               />
               {textRegions.map((region) => (
                 <div

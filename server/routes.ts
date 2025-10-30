@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import { storage } from "./storage";
-import { fileStorage } from "./file-storage";
+import { fileStorage, createUploadPath, getLegacyUploadPath } from "./file-storage";
 import { ocrProcessor } from "./ocr-processor";
 import {
   insertProjectSchema,
@@ -95,16 +95,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       
+      const project = await storage.getProject(id);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
       const directories = await storage.getDirectoriesByProject(id);
       for (const dir of directories) {
-        await fileStorage.deleteDirectory(`project_${id}/dir_${dir.id}`);
+        // Delete both new readable path and legacy path for backwards compatibility
+        const uploadPath = createUploadPath(project.name, dir.name, project.id, dir.id);
+        const legacyPath = getLegacyUploadPath(project.id, dir.id);
+        await fileStorage.deleteDirectory(uploadPath);
+        await fileStorage.deleteDirectory(legacyPath);
       }
       
       const success = await storage.deleteProject(id);
-      
-      if (!success) {
-        return res.status(404).json({ error: "Project not found" });
-      }
       
       res.status(204).send();
     } catch (error: any) {
@@ -158,7 +163,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Directory not found" });
       }
       
-      await fileStorage.deleteDirectory(`project_${directory.projectId}/dir_${id}`);
+      const project = await storage.getProject(directory.projectId);
+      if (project) {
+        // Delete both new readable path and legacy path for backwards compatibility
+        const uploadPath = createUploadPath(project.name, directory.name, project.id, directory.id);
+        const legacyPath = getLegacyUploadPath(project.id, directory.id);
+        await fileStorage.deleteDirectory(uploadPath);
+        await fileStorage.deleteDirectory(legacyPath);
+      }
+      
       const success = await storage.deleteDirectory(id);
       
       if (!success) {
@@ -248,12 +261,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Directory not found" });
       }
       
+      const project = await storage.getProject(directory.projectId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      const uploadPath = createUploadPath(project.name, directory.name, project.id, directoryId);
       const uploadedImages = [];
       
       for (const file of files) {
         const fileResult = await fileStorage.saveUploadedFile(
           file,
-          `project_${directory.projectId}/dir_${directoryId}`
+          uploadPath
         );
         
         const image = await storage.createImage({
@@ -301,9 +320,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Directory not found" });
       }
       
+      const project = await storage.getProject(directory.projectId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      const uploadPath = createUploadPath(project.name, directory.name, project.id, directoryId);
       const fileResult = await fileStorage.downloadFromUrl(
         url,
-        `project_${directory.projectId}/dir_${directoryId}`
+        uploadPath
       );
       
       const image = await storage.createImage({

@@ -78,12 +78,12 @@ export default function ProjectDetail() {
 
       try {
         // Create a default "root" directory
-        const newDir: Directory = await apiRequest("POST", "/api/directories", {
+        const newDir = await apiRequest("POST", "/api/directories", {
           projectId,
           name: "root",
           path: "/root",
           parentId: null,
-        });
+        }) as Directory;
 
         // Invalidate directories to refresh the list
         await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/directories`] });
@@ -416,6 +416,7 @@ export default function ProjectDetail() {
                 filename={image.originalFilename}
                 status={status}
                 confidence={confidence}
+                thumbnailUrl={`/api/images/${image.id}/file`}
                 onClick={() => setLocation(`/image/${image.id}`)}
               />
             );

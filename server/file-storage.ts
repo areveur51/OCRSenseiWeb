@@ -16,6 +16,47 @@ export interface FileUploadResult {
   height?: number;
 }
 
+/**
+ * Sanitize a string to be filesystem-safe
+ * Replaces special characters with underscores and limits length
+ */
+function sanitizePathComponent(name: string): string {
+  return name
+    .replace(/[^a-zA-Z0-9.-]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "")
+    .substring(0, 100);
+}
+
+/**
+ * Create a readable upload path using project and directory names with IDs for uniqueness
+ * Format: ProjectName_id{projectId}/DirectoryName_id{directoryId}/
+ * The ID suffix ensures no collisions even if sanitization produces identical strings
+ */
+export function createUploadPath(
+  projectName: string,
+  directoryName: string,
+  projectId: number,
+  directoryId: number
+): string {
+  const sanitizedProject = sanitizePathComponent(projectName);
+  const sanitizedDir = sanitizePathComponent(directoryName);
+  
+  // Add ID suffixes to guarantee uniqueness and prevent collisions
+  const projectPath = `${sanitizedProject}_id${projectId}`;
+  const dirPath = `${sanitizedDir}_id${directoryId}`;
+  
+  return path.join(projectPath, dirPath);
+}
+
+/**
+ * Get legacy upload path for backwards compatibility with old data
+ * Format: project_{projectId}/dir_{directoryId}/
+ */
+export function getLegacyUploadPath(projectId: number, directoryId: number): string {
+  return path.join(`project_${projectId}`, `dir_${directoryId}`);
+}
+
 export class FileStorageService {
   async ensureUploadDir(subdirectory?: string): Promise<string> {
     const dir = subdirectory ? path.join(UPLOAD_DIR, subdirectory) : UPLOAD_DIR;
