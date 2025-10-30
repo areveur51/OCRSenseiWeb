@@ -54,13 +54,22 @@ export default function ImageDetail() {
         onNavigate={(href) => console.log("Navigate:", href)}
       />
 
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          document_001.jpg
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Processed with dual OCR verification
-        </p>
+      <div className="flex gap-6">
+        <pre className="ascii-art text-xs hidden md:block">
+{`   ╔══════╗
+   ║ SCAN ║
+   ║ ▓▓▓▓ ║
+   ╚══════╝
+    [OCR]`}
+        </pre>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            <span className="headline-highlight">document_001.jpg</span>
+          </h1>
+          <p className="text-sm text-muted-foreground mt-2">
+            &gt; Dual OCR verification complete_
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">

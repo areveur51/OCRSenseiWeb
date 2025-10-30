@@ -47,7 +47,7 @@ export function ImageCard({
 
   return (
     <Card
-      className="overflow-hidden hover-elevate active-elevate-2 cursor-pointer"
+      className={`overflow-hidden hover-elevate active-elevate-2 cursor-pointer ${status === 'processing' ? 'loading-cursor' : ''}`}
       onClick={onClick}
       data-testid={`card-image-${filename}`}
     >
@@ -65,6 +65,7 @@ export function ImageCard({
           <Badge variant={config.variant} className="text-xs shadow-md">
             <Icon className="h-3 w-3 mr-1" />
             {config.label}
+            {status === 'processing' && <span className="cursor-blink ml-1">|</span>}
           </Badge>
         </div>
       </div>

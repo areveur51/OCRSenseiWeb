@@ -76,9 +76,9 @@
   --chart-4: 160 100% 50%;
   --chart-5: 80 100% 50%;
 
-  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-serif: Georgia, serif;
-  --font-mono: "JetBrains Mono", "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+  --font-sans: "Courier New", Consolas, Monaco, "Lucida Console", monospace;
+  --font-serif: "Courier New", Consolas, Monaco, "Lucida Console", monospace;
+  --font-mono: "Courier New", Consolas, Monaco, "Lucida Console", monospace;
   --radius: .5rem; /* 8px */
   --shadow-2xs: 0px 1px 2px 0px hsl(120 100% 50% / 0.15);
   --shadow-xs: 0px 1px 3px 0px hsl(120 100% 50% / 0.20);
@@ -198,7 +198,40 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-mono antialiased bg-background text-foreground;
+    cursor: default;
+  }
+  
+  /* Loading cursor animation */
+  .loading-cursor,
+  .loading-cursor * {
+    cursor: wait !important;
+  }
+  
+  /* Blinking cursor for terminal effect */
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+  
+  .cursor-blink {
+    animation: blink 1s infinite;
+  }
+  
+  /* Green background highlight for headlines */
+  .headline-highlight {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    padding: 0.25rem 0.5rem;
+    display: inline-block;
+  }
+  
+  /* ASCII art styling */
+  .ascii-art {
+    font-family: "Courier New", Consolas, Monaco, monospace;
+    white-space: pre;
+    line-height: 1.2;
+    color: hsl(var(--primary));
   }
 }
 

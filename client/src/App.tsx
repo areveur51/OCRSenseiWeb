@@ -58,7 +58,13 @@ export default function App() {
               <AppSidebar projects={mockProjects} />
               <div className="flex flex-col flex-1 overflow-hidden">
                 <header className="flex items-center justify-between p-4 border-b">
-                  <SidebarTrigger data-testid="button-sidebar-toggle" />
+                  <div className="flex items-center gap-4">
+                    <SidebarTrigger data-testid="button-sidebar-toggle" />
+                    <div className="ascii-art text-xs hidden md:flex items-center gap-1">
+                      <span>[TERMINAL] System Active</span>
+                      <span className="cursor-blink">_</span>
+                    </div>
+                  </div>
                   <ThemeToggle />
                 </header>
                 <main className="flex-1 overflow-auto">

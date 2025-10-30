@@ -42,12 +42,21 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b">
-        <h2 className="font-semibold text-lg">OCR Extractor</h2>
+        <pre className="ascii-art text-xs mb-2">
+{`╔═══════════════╗
+║  OCR  SYSTEM  ║
+╚═══════════════╝`}
+        </pre>
+        <h2 className="font-semibold text-lg">
+          <span className="headline-highlight">OCR EXTRACTOR</span>
+        </h2>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            <span className="headline-highlight">NAVIGATION</span>
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -79,7 +88,9 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Projects</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            <span className="headline-highlight">PROJECTS</span>
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {projects.map((project) => (
@@ -136,6 +147,13 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <div className="mt-3 pt-3 border-t">
+          <pre className="ascii-art text-xs opacity-70">
+{`Status: Online
+Uptime: 99.9%
+Mode: Active_`}
+          </pre>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

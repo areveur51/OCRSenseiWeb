@@ -48,11 +48,21 @@ export default function Search() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Search across all extracted text from your projects
-        </p>
+      <div className="flex gap-6">
+        <pre className="ascii-art text-xs hidden md:block">
+{`    ╭───╮
+    │ ? │
+    ╰───╯
+   [SEARCH]`}
+        </pre>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            <span className="headline-highlight">TEXT SEARCH</span>
+          </h1>
+          <p className="text-sm text-muted-foreground mt-2">
+            &gt; Search across all extracted text from projects_
+          </p>
+        </div>
       </div>
 
       <div className="max-w-3xl">

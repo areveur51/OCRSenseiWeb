@@ -43,12 +43,23 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage your OCR projects and track processing progress
-          </p>
+      <div className="flex items-start justify-between gap-6 flex-wrap">
+        <div className="flex gap-6">
+          <pre className="ascii-art text-xs hidden md:block">
+{`   ╔═══════╗
+   ║ ▓▓▓▓▓ ║
+   ║ ▓▓▓▓▓ ║
+   ╚═══════╝
+   [SERVER]`}
+          </pre>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              <span className="headline-highlight">SYSTEM DASHBOARD</span>
+            </h1>
+            <p className="text-sm text-muted-foreground mt-2">
+              &gt; Manage OCR projects and track processing status_
+            </p>
+          </div>
         </div>
         <CreateProjectDialog
           onCreateProject={(data) => console.log("New project:", data)}
@@ -83,7 +94,9 @@ export default function Dashboard() {
 
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h2 className="text-lg font-semibold">Projects</h2>
+          <h2 className="text-lg font-semibold">
+            <span className="headline-highlight">ACTIVE PROJECTS</span>
+          </h2>
           <div className="w-full md:w-96">
             <SearchBar
               placeholder="Search projects..."

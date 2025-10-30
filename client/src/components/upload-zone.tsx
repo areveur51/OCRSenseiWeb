@@ -44,17 +44,17 @@ export function UploadZone({ onFilesSelected }: UploadZoneProps) {
       onDrop={handleDrop}
       data-testid="upload-zone"
     >
-      <div className="p-4 rounded-full bg-primary/10">
-        {isDragging ? (
-          <FileImage className="h-8 w-8 text-primary" />
-        ) : (
-          <Upload className="h-8 w-8 text-primary" />
-        )}
-      </div>
+      <pre className="ascii-art text-xs">
+{`     ╱╲
+    ╱  ╲
+   ╱    ╲
+  ╱──────╲
+ [UPLOAD]`}
+      </pre>
 
       <div className="text-center space-y-2">
         <p className="font-medium">
-          {isDragging ? 'Drop files here' : 'Drag and drop images here'}
+          {isDragging ? '&gt; Drop files here_' : '&gt; Drag and drop images here'}
         </p>
         <p className="text-sm text-muted-foreground">or</p>
         <label>
