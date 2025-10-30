@@ -93,21 +93,32 @@ export class FileStorageService {
    */
   async extractImageUrl(url: string): Promise<string> {
     try {
-      // First, fetch the URL to check content type
-      const headResponse = await axios.head(url, {
-        maxRedirects: 5,
-        validateStatus: (status) => status < 400,
-      });
+      // If it's a known HTML page domain (archives.gov), skip HEAD and parse HTML directly
+      const isKnownHtmlPage = url.includes('archives.gov/id/');
+      
+      if (!isKnownHtmlPage) {
+        // First, try to check if it's a direct image link via HEAD request
+        try {
+          const headResponse = await axios.head(url, {
+            maxRedirects: 5,
+            validateStatus: (status) => status < 400,
+            timeout: 5000,
+          });
 
-      const contentType = headResponse.headers["content-type"] || "";
+          const contentType = headResponse.headers["content-type"] || "";
 
-      // If it's already an image, return the URL as-is
-      if (contentType.includes("image/")) {
-        return url;
+          // If it's already an image, return the URL as-is
+          if (contentType.includes("image/")) {
+            return url;
+          }
+        } catch (headError: any) {
+          console.warn("HEAD request failed, will try HTML parsing:", headError.message);
+          // Continue to HTML parsing
+        }
       }
 
-      // If it's HTML, fetch and parse to find download link
-      if (contentType.includes("text/html")) {
+      // Fetch and parse HTML to find download link
+      {
         const htmlResponse = await axios.get(url);
         const $ = cheerio.load(htmlResponse.data);
 
@@ -153,15 +164,19 @@ export class FileStorageService {
             const urlObj = new URL(url);
             imageUrl = new URL(imageUrl, url).href;
           }
+          console.log(`[URL Download] Extracted image URL: ${imageUrl} from page: ${url}`);
           return imageUrl;
+        } else {
+          console.warn(`[URL Download] Could not find image URL in HTML page: ${url}`);
         }
       }
 
       // If we couldn't extract an image URL, return the original URL
+      console.log(`[URL Download] Using original URL: ${url}`);
       return url;
-    } catch (error) {
+    } catch (error: any) {
       // On error, return the original URL and let downloadFromUrl handle it
-      console.error("Error extracting image URL:", error);
+      console.error("[URL Download] Error extracting image URL:", error.message);
       return url;
     }
   }

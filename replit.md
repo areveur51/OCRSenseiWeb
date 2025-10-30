@@ -64,11 +64,19 @@ Fixed dual-pass OCR counting issue where progress showed 117% (7 processed / 6 t
 Added HTML page parsing for URL downloads, enabling downloads from archives.gov and similar sites:
 - Installed `cheerio` for HTML parsing
 - Implemented `extractImageUrl()` method that:
-  - Checks if URL is already a direct image (via HEAD request)
-  - If HTML, parses page to find download links (e.g., links with "Download" text to S3 buckets)
-  - Falls back gracefully to original URL on errors
+  - Skips HEAD requests for known HTML pages (archives.gov/id/) to avoid blocking
+  - Parses HTML to find download links (e.g., links with "Download" text to S3 buckets)
+  - Falls back to HEAD requests for other URLs, with graceful error handling
+  - Comprehensive logging for debugging
 - Filename handling:
   - Uses actual JPG filename from the resolved image URL (no timestamp prefix)
   - Decodes URL-encoded characters for cleaner filenames
   - Example: `18-1487_US-MO_-26th-CAV--TRP-G-305-Cav--Hq-ca.-1-Jan-1916–31-Dec-1939_00664.jpg`
 - Supports archives.gov URLs like `https://catalog.archives.gov/id/150268931?objectPage=837`
+
+### Image Delete Functionality
+Added ability to delete images from the system:
+- Backend: DELETE /api/images/:id endpoint removes image and associated OCR data
+- Frontend: Delete button in image detail view with confirmation dialog
+- Automatic cache invalidation to refresh directory image lists
+- Navigates back to dashboard after successful deletion

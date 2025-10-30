@@ -6,10 +6,21 @@ import { ImageViewer } from "@/components/image-viewer";
 import { OCRComparison } from "@/components/ocr-comparison";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Play } from "lucide-react";
+import { Download, Play, Trash2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Image, OcrResult } from "@shared/schema";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ImageWithOcr extends Image {
   ocrResult?: OcrResult;
@@ -44,6 +55,35 @@ export default function ImageDetail() {
         variant: "destructive",
         title: "Error",
         description: error.message || "Failed to queue image for processing",
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!imageId || !image) return;
+
+    try {
+      await apiRequest("DELETE", `/api/images/${imageId}`);
+      
+      // Invalidate directory images cache to refresh the list
+      if (image.directoryId) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/directories/${image.directoryId}/images`] 
+        });
+      }
+      
+      toast({
+        title: "Image Deleted",
+        description: "Image and associated OCR data removed.",
+      });
+      
+      // Navigate back to dashboard
+      setLocation("/");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to delete image",
       });
     }
   };
@@ -108,6 +148,28 @@ export default function ImageDetail() {
               Export Text
             </Button>
           )}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" data-testid="button-delete-image">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Image?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the image file and all associated OCR data. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete}>
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 

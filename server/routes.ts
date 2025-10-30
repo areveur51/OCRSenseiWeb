@@ -246,6 +246,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/images/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteImage(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // File Upload
   app.post("/api/directories/:directoryId/upload", upload.array("images", 20), async (req, res) => {
     try {
