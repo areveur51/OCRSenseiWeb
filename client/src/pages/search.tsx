@@ -18,7 +18,16 @@ export default function Search() {
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
   const { data: results } = useQuery<SearchResult[]>({
-    queryKey: ["/api/search", { q: debouncedQuery }],
+    queryKey: ["/api/search", debouncedQuery],
+    queryFn: async () => {
+      const response = await fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Search failed");
+      }
+      return response.json();
+    },
     enabled: debouncedQuery.length > 0,
   });
 
