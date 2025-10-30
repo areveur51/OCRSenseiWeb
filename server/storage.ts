@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, desc, and, like, or, sql } from "drizzle-orm";
+import { eq, desc, and, like, or, sql, inArray } from "drizzle-orm";
 import {
   projects,
   directories,
@@ -216,7 +216,7 @@ export class DbStorage implements IStorage {
           total: sql<number>`count(*)::int`,
         })
         .from(images)
-        .where(sql`${images.directoryId} = ANY(${dirIds})`);
+        .where(inArray(images.directoryId, dirIds));
 
       totalImages = imageStats?.total || 0;
 
@@ -227,7 +227,7 @@ export class DbStorage implements IStorage {
           })
           .from(ocrResults)
           .innerJoin(images, eq(images.id, ocrResults.imageId))
-          .where(sql`${images.directoryId} = ANY(${dirIds})`);
+          .where(inArray(images.directoryId, dirIds));
 
         processedImages = processedStats?.processed || 0;
       }

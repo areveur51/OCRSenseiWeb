@@ -31,24 +31,6 @@ function Router() {
 }
 
 export default function App() {
-  const mockProjects = [
-    {
-      id: "1",
-      name: "Historical Documents",
-      subdirectories: ["1920s", "1930s", "1940s", "1950s"],
-    },
-    {
-      id: "2",
-      name: "Legal Archives",
-      subdirectories: ["contracts", "deeds", "wills"],
-    },
-    {
-      id: "3",
-      name: "Medical Records",
-      subdirectories: ["patient-files", "lab-results", "x-rays"],
-    },
-  ];
-
   const style = {
     "--sidebar-width": "20rem",
     "--sidebar-width-icon": "4rem",
@@ -60,7 +42,7 @@ export default function App() {
         <TooltipProvider>
           <SidebarProvider style={style as React.CSSProperties}>
             <div className="flex h-screen w-full">
-              <AppSidebar projects={mockProjects} />
+              <AppSidebar />
               <div className="flex flex-col flex-1 overflow-hidden">
                 <header className="flex items-center justify-between p-4 border-b">
                   <div className="flex items-center gap-4">
