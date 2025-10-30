@@ -44,12 +44,12 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b">
-        <pre className="ascii-art text-base mb-3 leading-tight">
-{`╔═══════════════╗
-║  OCR SYSTEM   ║
-║ ████████████  ║
-║ ════════════  ║
-╚═══════════════╝`}
+        <pre className="ascii-art text-base mb-3">
+{`╔════════════════╗
+║  OCR SYSTEM    ║
+║  ████████████  ║
+║  ════════════  ║
+╚════════════════╝`}
         </pre>
         <h2 className="font-semibold text-base">
           <span className="headline-highlight">OCR EXTRACTOR</span>
@@ -162,13 +162,13 @@ export function AppSidebar({ projects = [], onNavigate }: AppSidebarProps) {
         </div>
         
         <div className="mt-3 pt-3 border-t">
-          <pre className="ascii-art text-sm opacity-90 leading-tight">
-{`┌── SYSTEM ────┐
-│  ████  ✓     │
-│ Online       │
-│ Up: 99.9%    │
-│ Active_      │
-└──────────────┘`}
+          <pre className="ascii-art text-sm opacity-90">
+{`┌───────────────┐
+│  ████  ✓      │
+│  Online       │
+│  Up: 99.9%    │
+│  Active_      │
+└───────────────┘`}
           </pre>
         </div>
       </SidebarFooter>

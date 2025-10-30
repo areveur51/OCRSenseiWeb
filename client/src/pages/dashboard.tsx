@@ -47,22 +47,22 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-6 flex-wrap">
         <div className="flex gap-8">
-          <pre className="ascii-art text-xl leading-tight hidden lg:block">
-{`╔═══════════════╗
-║ ████████████ ║
-║ ████████████ ║
-║ ████████████ ║
-║ ████████████ ║
-║ ████████████ ║
-╚═══════════════╝
+          <pre className="ascii-art text-xl hidden lg:block">
+{`╔════════════════╗
+║  ████████████  ║
+║  ████████████  ║
+║  ████████████  ║
+║  ████████████  ║
+║  ████████████  ║
+╚════════════════╝
   [MAIN SERVER]`}
           </pre>
-          <pre className="ascii-art text-base leading-tight hidden md:block lg:hidden">
-{`╔═══════════╗
-║ ████████ ║
-║ ████████ ║
-║ ████████ ║
-╚═══════════╝
+          <pre className="ascii-art text-base hidden md:block lg:hidden">
+{`╔══════════════╗
+║  ██████████  ║
+║  ██████████  ║
+║  ██████████  ║
+╚══════════════╝
   [SERVER]`}
           </pre>
           <div>

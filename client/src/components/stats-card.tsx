@@ -56,7 +56,7 @@ export function StatsCard({
           )}
         </div>
         {asciiIcon && (
-          <pre className="ascii-art text-sm leading-tight opacity-80">
+          <pre className="ascii-art text-sm opacity-80">
 {asciiIcon}
           </pre>
         )}

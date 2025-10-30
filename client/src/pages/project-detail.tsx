@@ -66,13 +66,13 @@ export default function ProjectDetail() {
 
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex gap-8">
-          <pre className="ascii-art text-xl leading-tight hidden md:block">
-{`┌─────────────┐
-│ ███████████ │
-│ ███████████ │
-│ ███████████ │
-│ ███████████ │
-└─────────────┘
+          <pre className="ascii-art text-xl hidden md:block">
+{`┌───────────────┐
+│  ███████████  │
+│  ███████████  │
+│  ███████████  │
+│  ███████████  │
+└───────────────┘
    [FOLDER]`}
           </pre>
           <div>
