@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import { db } from "./db";
 import { images } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 import { readFile, access } from "fs/promises";
 import { resolve } from "path";
 import { constants } from "fs";
@@ -18,7 +18,7 @@ async function backfillImages() {
     const imagesToBackfill = await db
       .select()
       .from(images)
-      .where(eq(images.imageData, null));
+      .where(isNull(images.imageData));
 
     console.log(`Found ${imagesToBackfill.length} images to backfill\n`);
 
@@ -78,17 +78,13 @@ async function backfillImages() {
   }
 }
 
-// Run if executed directly
-if (require.main === module) {
-  backfillImages()
-    .then(() => {
-      console.log("✨ Backfill complete!");
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error("💥 Backfill failed:", error);
-      process.exit(1);
-    });
-}
-
-export { backfillImages };
+// Run the backfill
+backfillImages()
+  .then(() => {
+    console.log("✨ Backfill complete!");
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error("💥 Backfill failed:", error);
+    process.exit(1);
+  });
