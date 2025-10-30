@@ -28,7 +28,9 @@ OCR processing is handled by a Python-based service utilizing `pytesseract` with
 
 ### File Storage Strategy
 
-Files are stored on the local filesystem within an `uploads/` directory, organized into human-readable project and directory subfolders (e.g., `ProjectName_idX/DirectoryName_idY/`). This structure ensures unique paths while maintaining readability. The `images` table stores file paths and metadata.
+**Current (Database Storage):** Images are stored as binary data (bytea) in PostgreSQL within the `imageData` column of the `images` table. This provides better data integrity, simplifies backups, and enables atomic operations. The system maintains filesystem fallback for legacy images during transition.
+
+**Legacy (Filesystem Storage):** Previously, files were stored on the local filesystem within an `uploads/` directory, organized into human-readable project and directory subfolders (e.g., `ProjectName_idX/DirectoryName_idY/`). The `filePath` column maintains backward compatibility.
 
 ## External Dependencies
 
@@ -95,3 +97,39 @@ Added ability to delete images from the system:
 - Frontend: Delete button in image detail view with confirmation dialog
 - Automatic cache invalidation to refresh directory image lists
 - Navigates back to dashboard after successful deletion
+
+### Database Storage Migration (October 30, 2025)
+Successfully migrated from filesystem storage to PostgreSQL database storage for images:
+
+**Schema Changes:**
+- Added custom `bytea` type for storing binary image data as Buffer objects
+- Added nullable `imageData` column to images table for staged migration
+- Made `filePath` nullable for backward compatibility
+- Added Buffer validation to `insertImageSchema` using Zod refinement
+
+**Implementation:**
+- Upload endpoint stores `file.buffer` directly to database
+- URL download endpoint stores downloaded buffer to database
+- Image serving endpoint (`/api/images/:id/file`) uses intelligent fallback:
+  - Prefers database storage (`imageData`) if available
+  - Falls back to filesystem (`filePath`) for legacy images
+  - Returns 404 if neither source available
+- Proper Content-Type headers based on image format
+
+**Migration Process:**
+- Created backfill script (`server/backfill-images.ts`)
+- Successfully migrated all 9 existing images from filesystem to database
+- No data loss during migration
+- Filesystem files retained for fallback during transition
+
+**Filename Handling for URL Downloads:**
+- Uses original filename from URL if it has proper extension
+- Falls back to timestamp-based naming for URLs without extensions
+- Format: `${Date.now()}_${urlFilename || 'download'}.${extension}`
+- Ensures all files have proper extensions matching their MIME types
+
+**Benefits:**
+- Better data integrity (atomic operations)
+- Simplified backup and restore
+- No filesystem dependency for new images
+- Reduced storage complexity
