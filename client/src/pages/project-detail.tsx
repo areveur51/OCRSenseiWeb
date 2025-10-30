@@ -5,7 +5,7 @@ import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { Button } from "@/components/ui/button";
 import { ImageCard } from "@/components/image-card";
 import { UploadZone } from "@/components/upload-zone";
-import { Upload, Play, Plus, Link as LinkIcon, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { Upload, Play, Plus, MoreVertical, Edit, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -56,12 +56,10 @@ export default function ProjectDetail() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [urlDialogOpen, setUrlDialogOpen] = useState(false);
   const [createDirDialogOpen, setCreateDirDialogOpen] = useState(false);
   const [renameDirDialogOpen, setRenameDirDialogOpen] = useState(false);
   const [deleteDirDialogOpen, setDeleteDirDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [downloadUrl, setDownloadUrl] = useState("");
   const [newDirName, setNewDirName] = useState("");
   const [renameDirValue, setRenameDirValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -174,32 +172,6 @@ export default function ProjectDetail() {
       });
     } finally {
       setUploading(false);
-    }
-  };
-
-  const handleUrlDownload = async () => {
-    if (!currentDirectory || !downloadUrl.trim()) return;
-
-    try {
-      await apiRequest("POST", `/api/directories/${currentDirectory.id}/download-url`, {
-        url: downloadUrl.trim(),
-      });
-
-      queryClient.invalidateQueries({ queryKey: [`/api/directories/${currentDirectory.id}/images`] });
-      
-      toast({
-        title: "Download Started",
-        description: "Image downloaded and queued for processing.",
-      });
-      
-      setUrlDialogOpen(false);
-      setDownloadUrl("");
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Download Failed",
-        description: error.message || "Failed to download image from URL",
-      });
     }
   };
 
@@ -442,43 +414,6 @@ export default function ProjectDetail() {
                   onFilesSelected={handleFileUpload}
                 />
               )}
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={urlDialogOpen} onOpenChange={setUrlDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" data-testid="button-download-url">
-                <LinkIcon className="h-4 w-4 mr-2" />
-                Download URL
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Download from URL</DialogTitle>
-                <DialogDescription>
-                  Enter an image URL (e.g., from archives.gov) to download and process
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="image-url">Image URL</Label>
-                  <Input
-                    id="image-url"
-                    value={downloadUrl}
-                    onChange={(e) => setDownloadUrl(e.target.value)}
-                    placeholder="https://catalog.archives.gov/..."
-                    data-testid="input-download-url"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setUrlDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleUrlDownload} disabled={!downloadUrl.trim()}>
-                  Download
-                </Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
 
