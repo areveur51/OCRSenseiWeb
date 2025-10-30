@@ -69,14 +69,11 @@ export class FileStorageService {
     file: Express.Multer.File,
     subdirectory: string
   ): Promise<FileUploadResult> {
-    const dir = await this.ensureUploadDir(subdirectory);
     const timestamp = Date.now();
     const safeFilename = `${timestamp}_${file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-    const filePath = path.join(dir, safeFilename);
     const relativePath = path.join(subdirectory, safeFilename);
 
-    await fs.writeFile(filePath, file.buffer);
-
+    // Database storage only - no filesystem write
     const format = path.extname(file.originalname).slice(1).toLowerCase();
 
     return {
@@ -185,12 +182,10 @@ export class FileStorageService {
     url: string,
     subdirectory: string
   ): Promise<FileUploadResult & { buffer: Buffer }> {
-    const dir = await this.ensureUploadDir(subdirectory);
-    
     // First, try to extract the actual image URL if this is an HTML page
     const imageUrl = await this.extractImageUrl(url);
     
-    // Download to buffer instead of stream
+    // Download to buffer
     const response = await axios({
       method: "get",
       url: imageUrl,
@@ -228,12 +223,9 @@ export class FileStorageService {
       safeFilename = `${Date.now()}_${urlFilename || 'download'}.${extension}`;
     }
     
-    const filePath = path.join(dir, safeFilename);
     const relativePath = path.join(subdirectory, safeFilename);
 
-    // Write buffer to file
-    await fs.writeFile(filePath, buffer);
-
+    // Database storage only - no filesystem write
     return {
       filename: safeFilename,
       filePath: relativePath,
