@@ -99,6 +99,12 @@ export const monitoredSearches = pgTable("monitored_searches", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const settings = pgTable("settings", {
+  id: serial("id").primaryKey(),
+  fuzzySearchVariations: integer("fuzzy_search_variations").notNull().default(2),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // Insert schemas
 export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
@@ -139,6 +145,17 @@ export const insertMonitoredSearchSchema = createInsertSchema(monitoredSearches)
   createdAt: true,
 });
 
+export const insertSettingsSchema = createInsertSchema(settings).omit({
+  id: true,
+  updatedAt: true,
+}).extend({
+  fuzzySearchVariations: z.number().int().min(1).max(3).default(2),
+});
+
+export const updateSettingsSchema = z.object({
+  fuzzySearchVariations: z.number().int().min(1).max(3),
+});
+
 // Select types
 export type Project = typeof projects.$inferSelect;
 export type Directory = typeof directories.$inferSelect;
@@ -146,6 +163,7 @@ export type Image = typeof images.$inferSelect;
 export type OcrResult = typeof ocrResults.$inferSelect;
 export type ProcessingQueue = typeof processingQueue.$inferSelect;
 export type MonitoredSearch = typeof monitoredSearches.$inferSelect;
+export type Settings = typeof settings.$inferSelect;
 
 // Insert types
 export type InsertProject = z.infer<typeof insertProjectSchema>;
@@ -154,3 +172,5 @@ export type InsertImage = z.infer<typeof insertImageSchema>;
 export type InsertOcrResult = z.infer<typeof insertOcrResultSchema>;
 export type InsertProcessingQueue = z.infer<typeof insertProcessingQueueSchema>;
 export type InsertMonitoredSearch = z.infer<typeof insertMonitoredSearchSchema>;
+export type InsertSettings = z.infer<typeof insertSettingsSchema>;
+export type UpdateSettings = z.infer<typeof updateSettingsSchema>;
