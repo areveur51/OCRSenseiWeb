@@ -5,7 +5,7 @@ import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { Button } from "@/components/ui/button";
 import { ImageCard } from "@/components/image-card";
 import { UploadZone } from "@/components/upload-zone";
-import { Upload, Play, Download, Plus, Link as LinkIcon, Folder, FolderOpen } from "lucide-react";
+import { Upload, Play, Plus, Link as LinkIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Project, Directory, Image } from "@shared/schema";
@@ -389,73 +388,41 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      <div className="flex gap-6">
-        {/* Directory Tree Navigation */}
-        {directories && directories.length > 1 && (
-          <Card className="p-4 w-64 flex-shrink-0 self-start sticky top-6">
-            <div className="space-y-0.5">
-              {directories.map((dir) => {
-                const isActive = dir.id === currentDirectory?.id;
-                const Icon = isActive ? FolderOpen : Folder;
-                return (
-                  <button
-                    key={dir.id}
-                    onClick={() => setLocation(`/project/${projectId}/${encodeURIComponent(dir.name)}`)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${
-                      isActive
-                        ? 'bg-primary/10 text-primary font-medium'
-                        : 'text-muted-foreground hover-elevate active-elevate-2'
-                    }`}
-                    data-testid={`nav-directory-${dir.id}`}
-                  >
-                    <Icon className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate text-left">{dir.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </Card>
-        )}
-
-        {/* Main Content Area */}
-        <div className="flex-1 min-w-0">
-          {!images || images.length === 0 ? (
-            <div className="text-center py-12 space-y-4">
-              <pre className="ascii-art text-sm text-muted-foreground inline-block">
+      {!images || images.length === 0 ? (
+        <div className="text-center py-12 space-y-4">
+          <pre className="ascii-art text-sm text-muted-foreground inline-block">
 {`╔════════════╗
 ║    ∅∅∅∅    ║
 ║  NO DATA   ║
 ╚════════════╝`}
-              </pre>
-              <p className="text-muted-foreground">
-                No images yet. Upload some to get started!
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {images.map((image) => {
-                let status: "completed" | "processing" | "pending" | "error" = "pending";
-                if (image.processingStatus === "completed") status = "completed";
-                else if (image.processingStatus === "processing") status = "processing";
-                else if (image.processingStatus === "failed") status = "error";
-
-                const confidence = image.ocrResult?.pytesseractConfidence || image.ocrResult?.easyocrConfidence;
-
-                return (
-                  <ImageCard
-                    key={image.id}
-                    filename={image.originalFilename}
-                    status={status}
-                    confidence={confidence}
-                    thumbnailUrl={`/api/images/${image.id}/file`}
-                    onClick={() => setLocation(`/image/${image.id}`)}
-                  />
-                );
-              })}
-            </div>
-          )}
+          </pre>
+          <p className="text-muted-foreground">
+            No images yet. Upload some to get started!
+          </p>
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {images.map((image) => {
+            let status: "completed" | "processing" | "pending" | "error" = "pending";
+            if (image.processingStatus === "completed") status = "completed";
+            else if (image.processingStatus === "processing") status = "processing";
+            else if (image.processingStatus === "failed") status = "error";
+
+            const confidence = image.ocrResult?.pytesseractConfidence || image.ocrResult?.easyocrConfidence;
+
+            return (
+              <ImageCard
+                key={image.id}
+                filename={image.originalFilename}
+                status={status}
+                confidence={confidence}
+                thumbnailUrl={`/api/images/${image.id}/file`}
+                onClick={() => setLocation(`/image/${image.id}`)}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

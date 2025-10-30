@@ -56,11 +56,8 @@ Fixed dual-pass OCR counting issue where progress showed 117% (7 processed / 6 t
 - Added hover/active elevation effects
 - Rename/Delete buttons prevent card click with `stopPropagation()`
 
-### Directory Navigation
-Added sticky sidebar navigation tree to project detail page showing all directories with Folder/FolderOpen icons. Active directory highlighted. Only displays when project has 2+ directories, allowing easy traversal between subdirectories.
-
 ### UI Refinements
-- Removed "DIRECTORIES" heading from sidebar navigation for cleaner appearance
+- Removed redundant subdirectory navigation sidebar from project detail page
 - Fixed search to be case-insensitive (changed from `LIKE` to `ILIKE` in PostgreSQL query), allowing searches like "pedro" to match "Pedro", "PEDRO", etc.
 
 ### URL Download Enhancement
