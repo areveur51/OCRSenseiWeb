@@ -24,9 +24,9 @@ OCR processing is managed by a Python-based service using `pytesseract` with a d
 Images are stored as binary data (bytea) in PostgreSQL within the `imageData` column of the `images` table, providing data integrity and simplified backups. The system maintains filesystem fallback for legacy images.
 
 ### System Enhancements
-- **Search:** Results are ordered by OCR confidence score. Search queries are case-insensitive and properly encoded.
-- **Performance:** Database indexes are used for faster queries, and large binary fields like `imageData` are excluded from list queries. Frontend caching is optimized with React Query.
-- **Monitoring:** A feature allows monitoring specific search terms, tracking and displaying their result counts, and quickly re-running searches.
+- **Search:** Features fuzzy matching using PostgreSQL pg_trgm extension with word_similarity function. Allows 1-3 letter variations (e.g., "jack" matches "back", "hack", "Jace", "black"). Results are ordered by: exact matches first, then fuzzy matches by similarity score, then by OCR confidence. Search queries are case-insensitive and properly encoded.
+- **Performance:** Database indexes are used for faster queries, and large binary fields like `imageData` are excluded from list queries. Frontend caching is optimized with React Query (staleTime: Infinity, gcTime: 30 minutes).
+- **Monitoring:** A feature allows monitoring specific search terms, tracking and displaying their result counts, and quickly re-running searches. Monitored searches also use fuzzy matching.
 - **Management:** Comprehensive features for renaming and deleting directories and images, including cascade deletion for directories.
 
 ## External Dependencies
@@ -35,7 +35,7 @@ Images are stored as binary data (bytea) in PostgreSQL within the `imageData` co
 *   **OCR**: pytesseract (Python), Tesseract OCR engine, Pillow (Python)
 *   **Frontend**: React, TypeScript, Vite
 *   **Backend**: Express.js, Node.js
-*   **Database**: PostgreSQL (Neon), Drizzle ORM
+*   **Database**: PostgreSQL (Neon) with pg_trgm extension for fuzzy search, Drizzle ORM
 *   **State Management**: React Query
 *   **Routing**: Wouter
 *   **Form Handling**: React Hook Form, Zod
