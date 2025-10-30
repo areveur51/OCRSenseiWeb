@@ -3,6 +3,7 @@ import path from "path";
 import { createWriteStream } from "fs";
 import { pipeline } from "stream/promises";
 import axios from "axios";
+import * as cheerio from "cheerio";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 const MAX_FILE_SIZE = 17 * 1024 * 1024; // 17MB
@@ -86,15 +87,97 @@ export class FileStorageService {
     };
   }
 
+  /**
+   * Extracts the actual image download URL from an HTML page (like archives.gov)
+   * Returns the original URL if it's already a direct image link
+   */
+  async extractImageUrl(url: string): Promise<string> {
+    try {
+      // First, fetch the URL to check content type
+      const headResponse = await axios.head(url, {
+        maxRedirects: 5,
+        validateStatus: (status) => status < 400,
+      });
+
+      const contentType = headResponse.headers["content-type"] || "";
+
+      // If it's already an image, return the URL as-is
+      if (contentType.includes("image/")) {
+        return url;
+      }
+
+      // If it's HTML, fetch and parse to find download link
+      if (contentType.includes("text/html")) {
+        const htmlResponse = await axios.get(url);
+        const $ = cheerio.load(htmlResponse.data);
+
+        // Look for download links - archives.gov uses <a> tags with "Download" text
+        // and links to s3.amazonaws.com or direct image files
+        let imageUrl = "";
+
+        // Strategy 1: Find links with "Download" text
+        $('a').each((_, elem) => {
+          const href = $(elem).attr("href");
+          const text = $(elem).text().trim();
+          
+          if (href && text.toLowerCase().includes("download")) {
+            // Check if it's an image URL (ends with .jpg, .png, .tiff, .pdf or contains s3.amazonaws.com)
+            if (
+              href.match(/\.(jpg|jpeg|png|tiff|tif|pdf)$/i) ||
+              href.includes("s3.amazonaws.com") ||
+              href.includes("/NARAprodstorage/")
+            ) {
+              imageUrl = href;
+              return false; // Break the loop
+            }
+          }
+        });
+
+        // Strategy 2: If no download link found, look for any image URLs in links
+        if (!imageUrl) {
+          $('a[href*=".jpg"], a[href*=".jpeg"], a[href*=".png"], a[href*=".tiff"], a[href*=".pdf"]').each((_, elem) => {
+            const href = $(elem).attr("href");
+            if (href) {
+              imageUrl = href;
+              return false; // Break the loop
+            }
+          });
+        }
+
+        if (imageUrl) {
+          // Handle relative URLs
+          if (imageUrl.startsWith('/')) {
+            const urlObj = new URL(url);
+            imageUrl = `${urlObj.protocol}//${urlObj.host}${imageUrl}`;
+          } else if (!imageUrl.startsWith('http')) {
+            const urlObj = new URL(url);
+            imageUrl = new URL(imageUrl, url).href;
+          }
+          return imageUrl;
+        }
+      }
+
+      // If we couldn't extract an image URL, return the original URL
+      return url;
+    } catch (error) {
+      // On error, return the original URL and let downloadFromUrl handle it
+      console.error("Error extracting image URL:", error);
+      return url;
+    }
+  }
+
   async downloadFromUrl(
     url: string,
     subdirectory: string
   ): Promise<FileUploadResult> {
     const dir = await this.ensureUploadDir(subdirectory);
     
+    // First, try to extract the actual image URL if this is an HTML page
+    const imageUrl = await this.extractImageUrl(url);
+    
     const response = await axios({
       method: "get",
-      url,
+      url: imageUrl,
       responseType: "stream",
       maxContentLength: MAX_FILE_SIZE,
       maxBodyLength: MAX_FILE_SIZE,
@@ -107,7 +190,8 @@ export class FileStorageService {
     else if (contentType.includes("tiff")) extension = "tiff";
     else if (contentType.includes("pdf")) extension = "pdf";
 
-    const urlPath = new URL(url).pathname;
+    // Use the resolved image URL (not the original HTML page URL) for filename
+    const urlPath = new URL(imageUrl).pathname;
     const urlFilename = path.basename(urlPath);
     const timestamp = Date.now();
     const safeFilename = `${timestamp}_${urlFilename || `download.${extension}`}`;
