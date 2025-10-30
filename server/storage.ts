@@ -219,9 +219,10 @@ export class DbStorage implements IStorage {
 
   // Search
   async searchText(query: string): Promise<Array<{ image: Image; ocrResult: OcrResult }>> {
-    // Use fuzzy search with pg_trgm similarity matching
+    // Use fuzzy search with pg_trgm word_similarity matching
     // This allows finding variations with 1-3 letter differences
     // For example: "jack" matches "back", "hack", "Jace", "black", etc.
+    // word_similarity compares the query to words within the text, not the entire text
     
     // Omit imageData from search results for performance
     const results = await db
@@ -249,14 +250,15 @@ export class DbStorage implements IStorage {
         or(
           // Exact substring match (case-insensitive)
           ilike(ocrResults.consensusText, `%${query}%`),
-          // Fuzzy match using similarity - threshold 0.2 for 1-3 letter variations
-          sql`similarity(${ocrResults.consensusText}, ${query}) > 0.2`
+          // Fuzzy match using word_similarity - threshold 0.3 for 1-3 letter variations
+          // word_similarity finds similar words within the text
+          sql`word_similarity(${query}, ${ocrResults.consensusText}) > 0.3`
         )
       )
       .orderBy(
-        // Order by: exact match first, then similarity, then confidence
+        // Order by: exact match first, then word similarity, then confidence
         desc(sql`CASE WHEN ${ocrResults.consensusText} ILIKE ${`%${query}%`} THEN 1 ELSE 0 END`),
-        desc(sql`similarity(${ocrResults.consensusText}, ${query})`),
+        desc(sql`word_similarity(${query}, ${ocrResults.consensusText})`),
         desc(
           sql`CASE 
             WHEN ${ocrResults.consensusSource} = 'pytesseract_config1' THEN ${ocrResults.pytesseractConfidence}
@@ -283,8 +285,8 @@ export class DbStorage implements IStorage {
             or(
               // Exact substring match (case-insensitive)
               ilike(ocrResults.consensusText, `%${search.searchTerm}%`),
-              // Fuzzy match using similarity - threshold 0.2 for 1-3 letter variations
-              sql`similarity(${ocrResults.consensusText}, ${search.searchTerm}) > 0.2`
+              // Fuzzy match using word_similarity - threshold 0.3 for 1-3 letter variations
+              sql`word_similarity(${search.searchTerm}, ${ocrResults.consensusText}) > 0.3`
             )
           );
         
