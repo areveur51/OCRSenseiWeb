@@ -9,6 +9,7 @@ import {
   insertDirectorySchema,
   insertImageSchema,
   insertMonitoredSearchSchema,
+  updateSettingsSchema,
 } from "@shared/schema";
 
 const upload = multer({
@@ -506,6 +507,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Settings
+  app.get("/api/settings", async (req, res) => {
+    try {
+      const appSettings = await storage.getSettings();
+      res.json(appSettings);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/settings", async (req, res) => {
+    try {
+      const validated = updateSettingsSchema.parse(req.body);
+      const updated = await storage.updateSettings(validated);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
     }
   });
 
