@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +36,7 @@ interface ProjectWithStats extends Project {
 }
 
 export default function Projects() {
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -181,7 +183,12 @@ export default function Projects() {
                 : 0;
 
             return (
-              <Card key={project.id} className="p-6" data-testid={`card-project-${project.id}`}>
+              <Card 
+                key={project.id} 
+                className="p-6 cursor-pointer hover-elevate active-elevate-2" 
+                data-testid={`card-project-${project.id}`}
+                onClick={() => setLocation(`/project/${project.id}`)}
+              >
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
                     <pre className="ascii-art text-base opacity-90 flex-shrink-0">
@@ -192,7 +199,7 @@ export default function Projects() {
                     </pre>
                     <div className="flex-1 min-w-0">
                       <h3
-                        className="font-semibold text-base truncate"
+                        className="font-semibold text-base break-words"
                         data-testid={`text-project-name-${project.id}`}
                       >
                         {project.name}
@@ -240,7 +247,10 @@ export default function Projects() {
                     variant="outline"
                     size="sm"
                     className="flex-1"
-                    onClick={() => handleEditClick(project)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditClick(project);
+                    }}
                     data-testid={`button-rename-${project.id}`}
                   >
                     <Pencil className="h-3.5 w-3.5 mr-1.5" />
@@ -250,7 +260,10 @@ export default function Projects() {
                     variant="outline"
                     size="sm"
                     className="flex-1"
-                    onClick={() => handleDeleteClick(project)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteClick(project);
+                    }}
                     data-testid={`button-delete-${project.id}`}
                   >
                     <Trash2 className="h-3.5 w-3.5 mr-1.5" />

@@ -221,9 +221,11 @@ export class DbStorage implements IStorage {
       totalImages = imageStats?.total || 0;
 
       if (totalImages > 0) {
+        // Count DISTINCT images with OCR results, not total OCR result records
+        // (dual-pass verification creates 2 results per image)
         const [processedStats] = await db
           .select({
-            processed: sql<number>`count(*)::int`,
+            processed: sql<number>`count(distinct ${images.id})::int`,
           })
           .from(ocrResults)
           .innerJoin(images, eq(images.id, ocrResults.imageId))
