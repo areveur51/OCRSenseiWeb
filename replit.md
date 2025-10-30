@@ -44,3 +44,17 @@ Files are stored on the local filesystem within an `uploads/` directory, organiz
 *   **File Uploads**: Multer
 *   **HTTP Client**: Axios
 *   **Utilities**: date-fns, clsx, tailwind-merge, nanoid
+
+## Recent Updates (October 30, 2025)
+
+### Progress Bar Fix
+Fixed dual-pass OCR counting issue where progress showed 117% (7 processed / 6 total). Changed `processedImages` query to count distinct images instead of OCR result records, since each image creates 2 results (PSM 6 + PSM 3 configurations).
+
+### Projects Page UX
+- Made project cards fully clickable to navigate to project detail page
+- Changed title display from `truncate` to `break-words` to show full project names
+- Added hover/active elevation effects
+- Rename/Delete buttons prevent card click with `stopPropagation()`
+
+### Directory Navigation
+Added sticky sidebar navigation tree to project detail page showing all directories with Folder/FolderOpen icons. Active directory highlighted. Only displays when project has 2+ directories, allowing easy traversal between subdirectories.
