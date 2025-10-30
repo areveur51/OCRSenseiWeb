@@ -7,7 +7,8 @@ import {
   timestamp, 
   jsonb,
   serial,
-  customType
+  customType,
+  index
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -40,7 +41,9 @@ export const directories = pgTable("directories", {
   path: text("path").notNull(),
   parentId: integer("parent_id").references((): any => directories.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  projectIdIdx: index("directories_project_id_idx").on(table.projectId),
+}));
 
 export const images = pgTable("images", {
   id: serial("id").primaryKey(),
@@ -56,7 +59,9 @@ export const images = pgTable("images", {
   sourceUrl: text("source_url"),
   imageData: bytea("image_data"),
   uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  directoryIdIdx: index("images_directory_id_idx").on(table.directoryId),
+}));
 
 export const ocrResults = pgTable("ocr_results", {
   id: serial("id").primaryKey(),
@@ -69,7 +74,9 @@ export const ocrResults = pgTable("ocr_results", {
   consensusSource: text("consensus_source"),
   boundingBoxes: jsonb("bounding_boxes"),
   processedAt: timestamp("processed_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  imageIdIdx: index("ocr_results_image_id_idx").on(table.imageId),
+}));
 
 export const processingQueue = pgTable("processing_queue", {
   id: serial("id").primaryKey(),
@@ -81,7 +88,10 @@ export const processingQueue = pgTable("processing_queue", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
-});
+}, (table) => ({
+  imageIdIdx: index("processing_queue_image_id_idx").on(table.imageId),
+  statusIdx: index("processing_queue_status_idx").on(table.status),
+}));
 
 // Insert schemas
 export const insertProjectSchema = createInsertSchema(projects).omit({

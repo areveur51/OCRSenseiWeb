@@ -6,7 +6,7 @@ import { ImageViewer } from "@/components/image-viewer";
 import { OCRComparison } from "@/components/ocr-comparison";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Play, Trash2 } from "lucide-react";
+import { Download, Play, Trash2, Edit } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Image, OcrResult } from "@shared/schema";
@@ -21,6 +21,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface ImageWithOcr extends Image {
   ocrResult?: OcrResult;
@@ -33,6 +43,8 @@ export default function ImageDetail() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [newFilename, setNewFilename] = useState("");
 
   const { data: image } = useQuery<ImageWithOcr>({
     queryKey: [`/api/images/${imageId}`],
@@ -55,6 +67,38 @@ export default function ImageDetail() {
         variant: "destructive",
         title: "Error",
         description: error.message || "Failed to queue image for processing",
+      });
+    }
+  };
+
+  const handleRename = async () => {
+    if (!imageId || !newFilename.trim()) return;
+
+    try {
+      const response = await apiRequest("PATCH", `/api/images/${imageId}`, {
+        filename: newFilename.trim(),
+      });
+      await response.json();
+
+      queryClient.invalidateQueries({ queryKey: [`/api/images/${imageId}`] });
+      if (image?.directoryId) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/directories/${image.directoryId}/images`] 
+        });
+      }
+      
+      toast({
+        title: "Image Renamed",
+        description: `Filename changed to "${newFilename.trim()}".`,
+      });
+      
+      setRenameDialogOpen(false);
+      setNewFilename("");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Rename Failed",
+        description: error.message || "Failed to rename image",
       });
     }
   };
@@ -148,6 +192,13 @@ export default function ImageDetail() {
               Export Text
             </Button>
           )}
+          <Button variant="outline" onClick={() => {
+            setNewFilename(image?.filename || "");
+            setRenameDialogOpen(true);
+          }} data-testid="button-rename-image">
+            <Edit className="h-4 w-4 mr-2" />
+            Rename
+          </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" data-testid="button-delete-image">
@@ -238,6 +289,37 @@ export default function ImageDetail() {
           </div>
         </div>
       )}
+
+      <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Image</DialogTitle>
+            <DialogDescription>
+              Enter a new filename for this image
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-filename">Filename</Label>
+              <Input
+                id="new-filename"
+                value={newFilename}
+                onChange={(e) => setNewFilename(e.target.value)}
+                placeholder="Enter new filename"
+                data-testid="input-rename-image"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRename} disabled={!newFilename.trim()} data-testid="button-confirm-rename-image">
+              Rename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

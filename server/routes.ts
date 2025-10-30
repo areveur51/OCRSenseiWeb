@@ -265,6 +265,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/images/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = insertImageSchema.partial().parse(req.body);
+      const image = await storage.updateImage(id, updates);
+      
+      if (!image) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      
+      res.json(image);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   app.delete("/api/images/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

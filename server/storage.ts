@@ -37,6 +37,7 @@ export interface IStorage {
   getImagesByDirectory(directoryId: number): Promise<Image[]>;
   getImage(id: number): Promise<Image | undefined>;
   createImage(image: InsertImage): Promise<Image>;
+  updateImage(id: number, updates: Partial<InsertImage>): Promise<Image | undefined>;
   deleteImage(id: number): Promise<boolean>;
 
   // OCR Results
@@ -122,7 +123,22 @@ export class DbStorage implements IStorage {
 
   // Images
   async getImagesByDirectory(directoryId: number): Promise<Image[]> {
-    return db.select().from(images).where(eq(images.directoryId, directoryId));
+    // Omit imageData from list queries for performance (large binary field)
+    return db.select({
+      id: images.id,
+      directoryId: images.directoryId,
+      filename: images.filename,
+      originalFilename: images.originalFilename,
+      filePath: images.filePath,
+      fileSize: images.fileSize,
+      format: images.format,
+      width: images.width,
+      height: images.height,
+      sourceType: images.sourceType,
+      sourceUrl: images.sourceUrl,
+      imageData: sql<null>`NULL`.as('imageData'),
+      uploadedAt: images.uploadedAt,
+    }).from(images).where(eq(images.directoryId, directoryId));
   }
 
   async getImage(id: number): Promise<Image | undefined> {
@@ -133,6 +149,15 @@ export class DbStorage implements IStorage {
   async createImage(image: InsertImage): Promise<Image> {
     const [newImage] = await db.insert(images).values(image).returning();
     return newImage;
+  }
+
+  async updateImage(id: number, updates: Partial<InsertImage>): Promise<Image | undefined> {
+    const [updated] = await db
+      .update(images)
+      .set(updates)
+      .where(eq(images.id, id))
+      .returning();
+    return updated;
   }
 
   async deleteImage(id: number): Promise<boolean> {
@@ -186,9 +211,24 @@ export class DbStorage implements IStorage {
 
   // Search
   async searchText(query: string): Promise<Array<{ image: Image; ocrResult: OcrResult }>> {
+    // Omit imageData from search results for performance
     const results = await db
       .select({
-        image: images,
+        image: {
+          id: images.id,
+          directoryId: images.directoryId,
+          filename: images.filename,
+          originalFilename: images.originalFilename,
+          filePath: images.filePath,
+          fileSize: images.fileSize,
+          format: images.format,
+          width: images.width,
+          height: images.height,
+          sourceType: images.sourceType,
+          sourceUrl: images.sourceUrl,
+          imageData: sql<null>`NULL`.as('imageData'),
+          uploadedAt: images.uploadedAt,
+        },
         ocrResult: ocrResults,
       })
       .from(ocrResults)
@@ -211,41 +251,33 @@ export class DbStorage implements IStorage {
     processedImages: number;
     totalDirectories: number;
   }> {
-    const dirs = await this.getDirectoriesByProject(projectId);
-    const dirIds = dirs.map(d => d.id);
+    // Use CTE to batch queries for better performance
+    const result = await db.execute(sql`
+      WITH directory_ids AS (
+        SELECT id FROM ${directories} WHERE ${directories.projectId} = ${projectId}
+      ),
+      image_stats AS (
+        SELECT count(*)::int as total
+        FROM ${images}
+        WHERE ${images.directoryId} IN (SELECT id FROM directory_ids)
+      ),
+      processed_stats AS (
+        SELECT count(DISTINCT ${images.id})::int as processed
+        FROM ${ocrResults}
+        INNER JOIN ${images} ON ${images.id} = ${ocrResults.imageId}
+        WHERE ${images.directoryId} IN (SELECT id FROM directory_ids)
+      )
+      SELECT 
+        (SELECT count(*)::int FROM directory_ids) as total_directories,
+        COALESCE((SELECT total FROM image_stats), 0) as total_images,
+        COALESCE((SELECT processed FROM processed_stats), 0) as processed_images
+    `);
 
-    let totalImages = 0;
-    let processedImages = 0;
-
-    if (dirIds.length > 0) {
-      const [imageStats] = await db
-        .select({
-          total: sql<number>`count(*)::int`,
-        })
-        .from(images)
-        .where(inArray(images.directoryId, dirIds));
-
-      totalImages = imageStats?.total || 0;
-
-      if (totalImages > 0) {
-        // Count DISTINCT images with OCR results, not total OCR result records
-        // (dual-pass verification creates 2 results per image)
-        const [processedStats] = await db
-          .select({
-            processed: sql<number>`count(distinct ${images.id})::int`,
-          })
-          .from(ocrResults)
-          .innerJoin(images, eq(images.id, ocrResults.imageId))
-          .where(inArray(images.directoryId, dirIds));
-
-        processedImages = processedStats?.processed || 0;
-      }
-    }
-
+    const stats = result.rows[0] as any;
     return {
-      totalImages,
-      processedImages,
-      totalDirectories: dirs.length,
+      totalImages: stats?.total_images || 0,
+      processedImages: stats?.processed_images || 0,
+      totalDirectories: stats?.total_directories || 0,
     };
   }
 }
