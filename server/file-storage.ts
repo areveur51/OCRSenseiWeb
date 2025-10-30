@@ -207,7 +207,7 @@ export class FileStorageService {
     else if (contentType.includes("tiff")) extension = "tiff";
     else if (contentType.includes("pdf")) extension = "pdf";
 
-    // Use the resolved image URL (not the original HTML page URL) for filename
+    // Extract filename from URL with fallback to timestamp-based naming
     const urlPath = new URL(imageUrl).pathname;
     let urlFilename = path.basename(urlPath);
     
@@ -215,12 +215,18 @@ export class FileStorageService {
     try {
       urlFilename = decodeURIComponent(urlFilename);
     } catch (error) {
-      // If decoding fails, use the original filename
       console.warn("Failed to decode URL filename:", error);
     }
     
-    // Use the actual filename from the URL without timestamp prefix
-    const safeFilename = urlFilename || `download_${Date.now()}.${extension}`;
+    // Ensure filename has proper extension - use timestamp-based naming for safety
+    let safeFilename: string;
+    if (urlFilename && urlFilename.includes('.')) {
+      // Use original filename if it has an extension
+      safeFilename = urlFilename;
+    } else {
+      // Fallback to timestamp-based naming to ensure proper extension
+      safeFilename = `${Date.now()}_${urlFilename || 'download'}.${extension}`;
+    }
     
     const filePath = path.join(dir, safeFilename);
     const relativePath = path.join(subdirectory, safeFilename);

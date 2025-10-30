@@ -98,7 +98,13 @@ export const insertDirectorySchema = createInsertSchema(directories).omit({
 export const insertImageSchema = createInsertSchema(images).omit({
   id: true,
   uploadedAt: true,
-});
+}).refine(
+  (data) => !data.imageData || Buffer.isBuffer(data.imageData),
+  {
+    message: "imageData must be a Buffer instance",
+    path: ["imageData"],
+  }
+);
 
 export const insertOcrResultSchema = createInsertSchema(ocrResults).omit({
   id: true,
