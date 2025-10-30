@@ -49,11 +49,12 @@ export default function Search() {
   return (
     <div className="space-y-6">
       <div className="flex gap-6">
-        <pre className="ascii-art text-xs hidden md:block">
-{`    ╭───╮
-    │ ? │
-    ╰───╯
-   [SEARCH]`}
+        <pre className="ascii-art text-sm hidden md:block">
+{`   ╭─────╮
+   │  ?  │
+   │ ─── │
+   ╰─────╯
+  [SEARCH]`}
         </pre>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">

@@ -55,12 +55,13 @@ export default function ImageDetail() {
       />
 
       <div className="flex gap-6">
-        <pre className="ascii-art text-xs hidden md:block">
-{`   ╔══════╗
-   ║ SCAN ║
-   ║ ▓▓▓▓ ║
-   ╚══════╝
-    [OCR]`}
+        <pre className="ascii-art text-sm hidden md:block">
+{`  ╔════════╗
+  ║  SCAN  ║
+  ║ ██████ ║
+  ║ ██████ ║
+  ╚════════╝
+   [OCR]`}
         </pre>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">

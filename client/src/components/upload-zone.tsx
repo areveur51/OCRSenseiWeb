@@ -44,12 +44,13 @@ export function UploadZone({ onFilesSelected }: UploadZoneProps) {
       onDrop={handleDrop}
       data-testid="upload-zone"
     >
-      <pre className="ascii-art text-xs">
-{`     ╱╲
-    ╱  ╲
-   ╱    ╲
-  ╱──────╲
- [UPLOAD]`}
+      <pre className="ascii-art text-base">
+{`      ╱╲
+     ╱  ╲
+    ╱    ╲
+   ╱──────╲
+  ╱────────╲
+  [UPLOAD]`}
       </pre>
 
       <div className="text-center space-y-2">

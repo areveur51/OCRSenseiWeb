@@ -45,12 +45,13 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-6 flex-wrap">
         <div className="flex gap-6">
-          <pre className="ascii-art text-xs hidden md:block">
-{`   ╔═══════╗
-   ║ ▓▓▓▓▓ ║
-   ║ ▓▓▓▓▓ ║
-   ╚═══════╝
-   [SERVER]`}
+          <pre className="ascii-art text-sm hidden md:block">
+{`  ╔═════════╗
+  ║ ████████║
+  ║ ████████║
+  ║ ████████║
+  ╚═════════╝
+  [SERVER]`}
           </pre>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
