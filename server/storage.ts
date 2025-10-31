@@ -136,6 +136,11 @@ export class DbStorage implements IStorage {
   }
 
   async convertProjectToDirectory(projectId: number, targetProjectId: number, newParentDirId?: number): Promise<Directory> {
+    // Prevent converting a project into itself
+    if (projectId === targetProjectId) {
+      throw new Error("Cannot convert a project into itself");
+    }
+
     const project = await this.getProject(projectId);
     if (!project) {
       throw new Error("Project not found");
@@ -146,10 +151,18 @@ export class DbStorage implements IStorage {
       throw new Error("Target project not found");
     }
 
+    // Validate parent directory if specified
+    if (newParentDirId) {
+      const parentDir = await this.getDirectory(newParentDirId);
+      if (!parentDir || parentDir.projectId !== targetProjectId) {
+        throw new Error("Invalid parent directory or parent belongs to different project");
+      }
+    }
+
     // Get all directories in the project being converted
     const oldDirs = await this.getDirectoriesByProject(projectId);
 
-    // Create a new directory in the target project
+    // Create a new directory in the target project to represent the old project
     const { generateSlug } = await import("@shared/slugs");
     const baseSlug = generateSlug(project.name);
     const targetDirs = await this.getDirectoriesByProject(targetProjectId);
@@ -157,8 +170,9 @@ export class DbStorage implements IStorage {
     const { generateUniqueSlug } = await import("@shared/slugs");
     const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
 
-    const newPath = newParentDirId 
-      ? `${(await this.getDirectory(newParentDirId))?.path}/${project.name}`
+    const parentDir = newParentDirId ? await this.getDirectory(newParentDirId) : null;
+    const newPath = parentDir 
+      ? `${parentDir.path}/${project.name}`
       : `/${project.name}`;
 
     const [newDir] = await db.insert(directories).values({
@@ -170,18 +184,35 @@ export class DbStorage implements IStorage {
       sortOrder: 0,
     }).returning();
 
-    // Update all old directories to belong to the target project and be under the new directory
-    for (const oldDir of oldDirs) {
-      const newDirPath = `${newPath}/${oldDir.name}`;
-      await db
-        .update(directories)
-        .set({ 
-          projectId: targetProjectId,
-          parentId: oldDir.parentId ? oldDir.parentId : newDir.id,
-          path: newDirPath
-        })
-        .where(eq(directories.id, oldDir.id));
-    }
+    // Recursively update all directories to belong to target project and fix paths
+    const updateDirectoryTree = async (oldParentId: number | null, newParentId: number, basePath: string) => {
+      const children = oldDirs.filter(d => d.parentId === oldParentId);
+      
+      for (const child of children) {
+        const childPath = `${basePath}/${child.name}`;
+        
+        await db
+          .update(directories)
+          .set({ 
+            projectId: targetProjectId,
+            parentId: newParentId,
+            path: childPath
+          })
+          .where(eq(directories.id, child.id));
+
+        // Recursively update children of this directory
+        await updateDirectoryTree(child.id, child.id, childPath);
+      }
+    };
+
+    // Start the recursive update from root directories (parentId: null)
+    await updateDirectoryTree(null, newDir.id, newPath);
+
+    // Update all images to belong to the target project's directories (paths already updated)
+    await db
+      .update(images)
+      .set({ directoryId: db.raw(`directory_id`) }) // No-op to trigger any cascading updates if needed
+      .where(sql`directory_id IN (SELECT id FROM directories WHERE project_id = ${targetProjectId})`);
 
     // Delete the old project
     await this.deleteProject(projectId);
@@ -194,6 +225,8 @@ export class DbStorage implements IStorage {
     if (!directory) {
       throw new Error("Directory not found");
     }
+
+    const oldProjectId = directory.projectId;
 
     // Generate unique slug for new project
     const { generateSlug } = await import("@shared/slugs");
@@ -210,51 +243,53 @@ export class DbStorage implements IStorage {
       description: null,
     }).returning();
 
-    // Get all child directories of this directory
-    const childDirs = await db
+    // Get ALL directories in the old project to find the full subtree
+    const allOldDirs = await db
       .select()
       .from(directories)
-      .where(eq(directories.parentId, directoryId));
+      .where(eq(directories.projectId, oldProjectId));
 
-    // Update all child directories to belong to the new project and update their paths
-    for (const child of childDirs) {
-      const newPath = `/${child.name}`;
+    // Find all descendants of this directory (recursively)
+    const findDescendants = (parentId: number): number[] => {
+      const children = allOldDirs.filter(d => d.parentId === parentId);
+      const childIds = children.map(c => c.id);
+      const allDescendants = [...childIds];
+      
+      for (const childId of childIds) {
+        allDescendants.push(...findDescendants(childId));
+      }
+      
+      return allDescendants;
+    };
+
+    const descendantIds = findDescendants(directoryId);
+    const allAffectedDirIds = [directoryId, ...descendantIds];
+
+    // Recursively update directory tree paths relative to new project root
+    const updateDescendants = async (oldDirId: number, newParentId: number | null, basePath: string) => {
+      const dir = allOldDirs.find(d => d.id === oldDirId);
+      if (!dir) return;
+
+      const newPath = basePath;
+      
       await db
         .update(directories)
         .set({
           projectId: newProject.id,
-          parentId: null,  // Root level in new project
+          parentId: newParentId,
           path: newPath
         })
-        .where(eq(directories.id, child.id));
-    }
+        .where(eq(directories.id, oldDirId));
 
-    // Move images from the directory to a new root directory in the new project
-    const dirImages = await db
-      .select()
-      .from(images)
-      .where(eq(images.directoryId, directoryId));
+      // Update children
+      const children = allOldDirs.filter(d => d.parentId === oldDirId);
+      for (const child of children) {
+        await updateDescendants(child.id, oldDirId, `${newPath}/${child.name}`);
+      }
+    };
 
-    if (dirImages.length > 0) {
-      // Create a root directory in the new project for the images
-      const [rootDir] = await db.insert(directories).values({
-        projectId: newProject.id,
-        name: "Root",
-        slug: "root",
-        path: "/Root",
-        parentId: null,
-        sortOrder: 0,
-      }).returning();
-
-      // Move images to the new root directory
-      await db
-        .update(images)
-        .set({ directoryId: rootDir.id })
-        .where(eq(images.directoryId, directoryId));
-    }
-
-    // Delete the original directory
-    await this.deleteDirectory(directoryId);
+    // Start the update - the original directory becomes the root
+    await updateDescendants(directoryId, null, `/${directory.name}`);
 
     return newProject;
   }
