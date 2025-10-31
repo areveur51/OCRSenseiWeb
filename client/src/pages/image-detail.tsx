@@ -182,12 +182,14 @@ export default function ImageDetail() {
         </div>
 
         <div className="flex gap-2">
-          {!image?.ocrResult && (
-            <Button onClick={handleReprocess} data-testid="button-process">
-              <Play className="h-4 w-4 mr-2" />
-              Process Now
-            </Button>
-          )}
+          <Button 
+            onClick={handleReprocess} 
+            variant={image?.ocrResult ? "outline" : "default"}
+            data-testid="button-process"
+          >
+            <Play className="h-4 w-4 mr-2" />
+            {image?.ocrResult ? "Reprocess" : "Process Now"}
+          </Button>
           {image?.ocrResult && (
             <Button variant="outline" data-testid="button-download">
               <Download className="h-4 w-4 mr-2" />
