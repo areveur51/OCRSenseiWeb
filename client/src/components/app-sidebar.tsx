@@ -11,12 +11,38 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Home, FolderOpen, Search, Settings, ChevronRight, GripVertical, Edit3, Save } from "lucide-react";
-import { useState } from "react";
+import { useState, createContext, useContext } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Project, Directory } from "@shared/schema";
+
+// Drag state context for cross-component communication
+type DraggedItem = 
+  | { type: 'project'; id: number; data: Project }
+  | { type: 'directory'; id: number; data: Directory; projectSlug: string }
+  | null;
+
+type DropAction = 'reorder' | 'convert-to-directory' | 'convert-to-project' | 'change-parent';
+
+interface DragContextType {
+  draggedItem: DraggedItem;
+  setDraggedItem: (item: DraggedItem) => void;
+  dropTargetId: number | null;
+  setDropTargetId: (id: number | null) => void;
+  dropAction: DropAction | null;
+  setDropAction: (action: DropAction | null) => void;
+}
+
+const DragContext = createContext<DragContextType>({
+  draggedItem: null,
+  setDraggedItem: () => {},
+  dropTargetId: null,
+  setDropTargetId: () => {},
+  dropAction: null,
+  setDropAction: () => {},
+});
 
 interface ProjectWithDirectories extends Project {
   directories?: Directory[];
@@ -24,12 +50,13 @@ interface ProjectWithDirectories extends Project {
 
 export function AppSidebar() {
   const [, setLocation] = useLocation();
-  const [expandedProjects, setExpandedProjects] = useState<Set<number>>(
-    new Set()
-  );
+  const [expandedProjects, setExpandedProjects] = useState<Set<number>>(new Set());
   const [editMode, setEditMode] = useState(false);
-  const [draggedProject, setDraggedProject] = useState<number | null>(null);
-  const [dropTargetProject, setDropTargetProject] = useState<number | null>(null);
+  
+  // Enhanced drag state
+  const [draggedItem, setDraggedItem] = useState<DraggedItem>(null);
+  const [dropTargetId, setDropTargetId] = useState<number | null>(null);
+  const [dropAction, setDropAction] = useState<DropAction | null>(null);
   const { toast } = useToast();
 
   const { data: projects } = useQuery<Project[]>({
@@ -46,251 +73,374 @@ export function AppSidebar() {
     setExpandedProjects(newExpanded);
   };
 
-  const handleDragStart = (e: React.DragEvent, projectId: number) => {
-    setDraggedProject(projectId);
+  const handleProjectDragStart = (e: React.DragEvent, project: Project) => {
+    setDraggedItem({ type: 'project', id: project.id, data: project });
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragOver = (e: React.DragEvent, targetProjectId: number) => {
+  const handleProjectDragOver = (e: React.DragEvent, targetProject: Project) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     
-    if (!draggedProject || draggedProject === targetProjectId) return;
-    setDropTargetProject(targetProjectId);
+    if (!draggedItem || !editMode) return;
+
+    // Determine action based on what's being dragged
+    if (draggedItem.type === 'project') {
+      if (draggedItem.id === targetProject.id) return;
+      
+      // Check if dragging over expanded project area
+      const rect = e.currentTarget.getBoundingClientRect();
+      const mouseY = e.clientY - rect.top;
+      const elementHeight = rect.height;
+      
+      // If over an expanded project's middle area, convert to directory
+      // Otherwise, reorder projects
+      if (expandedProjects.has(targetProject.id) && mouseY > elementHeight * 0.3 && mouseY < elementHeight * 0.7) {
+        setDropAction('convert-to-directory');
+        setDropTargetId(targetProject.id);
+      } else {
+        setDropAction('reorder');
+        setDropTargetId(targetProject.id);
+      }
+    } else if (draggedItem.type === 'directory') {
+      // Directory dropped on project = convert to subdirectory
+      setDropAction('change-parent');
+      setDropTargetId(targetProject.id);
+    }
   };
 
-  const handleDragLeave = () => {
-    setDropTargetProject(null);
+  const handleProjectDragLeave = () => {
+    setDropTargetId(null);
+    setDropAction(null);
   };
 
-  const handleDrop = async (e: React.DragEvent, targetProjectId: number) => {
+  const handleProjectDrop = async (e: React.DragEvent, targetProject: Project) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (!draggedProject || draggedProject === targetProjectId || !projects) return;
-
-    const draggedProj = projects.find(p => p.id === draggedProject);
-    const targetProj = projects.find(p => p.id === targetProjectId);
-
-    if (!draggedProj || !targetProj) return;
+    if (!draggedItem || !projects || !dropAction) return;
 
     try {
-      // Create new order by moving dragged project to target position
-      const projectList = [...projects];
-      const draggedIndex = projectList.findIndex(p => p.id === draggedProject);
-      const targetIndex = projectList.findIndex(p => p.id === targetProjectId);
-      
-      // Remove dragged project from current position
-      const [movedProject] = projectList.splice(draggedIndex, 1);
-      
-      // Insert at target position
-      projectList.splice(targetIndex, 0, movedProject);
-      
-      // Assign new sequential sortOrder values (1, 2, 3, ...)
-      const updates = projectList.map((project, index) => 
-        apiRequest("POST", `/api/projects/${project.id}/reorder`, {
-          sortOrder: index + 1,
-        })
-      );
+      if (draggedItem.type === 'project' && dropAction === 'reorder') {
+        // Project reordering
+        if (draggedItem.id === targetProject.id) return;
 
-      await Promise.all(updates);
+        const projectList = [...projects];
+        const draggedIndex = projectList.findIndex(p => p.id === draggedItem.id);
+        const targetIndex = projectList.findIndex(p => p.id === targetProject.id);
+        
+        const [movedProject] = projectList.splice(draggedIndex, 1);
+        projectList.splice(targetIndex, 0, movedProject);
+        
+        const updates = projectList.map((project, index) => 
+          apiRequest("POST", `/api/projects/${project.id}/reorder`, {
+            sortOrder: index + 1,
+          })
+        );
+
+        await Promise.all(updates);
+        queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+
+        toast({
+          title: "Projects Reordered",
+          description: "Project order updated successfully",
+        });
+      } else if (draggedItem.type === 'project' && dropAction === 'convert-to-directory') {
+        // Convert project to directory under target project
+        await apiRequest("POST", `/api/projects/${draggedItem.id}/convert-to-directory`, {
+          targetProjectId: targetProject.id,
+        });
+
+        queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+        queryClient.invalidateQueries({ queryKey: [`/api/p/${targetProject.slug}/directories`] });
+
+        toast({
+          title: "Project Converted",
+          description: `"${draggedItem.data.name}" is now a directory under "${targetProject.name}"`,
+        });
+
+        // Expand the target project to show the new directory
+        setExpandedProjects(prev => new Set(prev).add(targetProject.id));
+      } else if (draggedItem.type === 'directory' && dropAction === 'change-parent') {
+        // Move directory to be a subdirectory under the project root
+        const targetPath = `${targetProject.name}/${draggedItem.data.name}`;
+        
+        await apiRequest("POST", `/api/directories/${draggedItem.id}/change-parent`, {
+          newParentId: null, // Root of the target project
+          newPath: targetPath,
+        });
+
+        queryClient.invalidateQueries({ queryKey: [`/api/p/${draggedItem.projectSlug}/directories`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/p/${targetProject.slug}/directories`] });
+
+        toast({
+          title: "Directory Moved",
+          description: `"${draggedItem.data.name}" moved to "${targetProject.name}"`,
+        });
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Operation Failed",
+        description: error.message || "Failed to complete operation",
+      });
+    }
+
+    setDraggedItem(null);
+    setDropTargetId(null);
+    setDropAction(null);
+  };
+
+  // Project list drop zone for directory→project conversion
+  const handleProjectListDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    
+    if (!draggedItem || draggedItem.type !== 'directory' || !editMode) return;
+    
+    e.dataTransfer.dropEffect = 'move';
+    setDropAction('convert-to-project');
+    setDropTargetId(-1); // Special ID for project list
+  };
+
+  const handleProjectListDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedItem || draggedItem.type !== 'directory' || dropAction !== 'convert-to-project') return;
+
+    try {
+      await apiRequest("POST", `/api/directories/${draggedItem.id}/convert-to-project`, {});
 
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/p/${draggedItem.projectSlug}/directories`] });
 
       toast({
-        title: "Projects Reordered",
-        description: "Project order updated successfully",
+        title: "Directory Promoted",
+        description: `"${draggedItem.data.name}" is now a top-level project`,
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Operation Failed",
-        description: error.message || "Failed to reorder projects",
+        description: error.message || "Failed to promote directory to project",
       });
     }
 
-    setDraggedProject(null);
-    setDropTargetProject(null);
+    setDraggedItem(null);
+    setDropTargetId(null);
+    setDropAction(null);
+  };
+
+  const getProjectDropIndicator = (projectId: number) => {
+    if (dropTargetId !== projectId || !dropAction) return null;
+    
+    if (dropAction === 'reorder') {
+      return 'bg-primary/20 border-2 border-primary rounded';
+    } else if (dropAction === 'convert-to-directory') {
+      return 'bg-blue-500/20 border-2 border-blue-500 rounded';
+    } else if (dropAction === 'change-parent') {
+      return 'bg-purple-500/20 border-2 border-purple-500 rounded';
+    }
+    return null;
   };
 
   return (
-    <Sidebar>
-      <SidebarHeader className="p-4 border-b">
-        <div className="flex items-center gap-3">
-          <pre className="ascii-art text-sm">
+    <DragContext.Provider value={{
+      draggedItem,
+      setDraggedItem,
+      dropTargetId,
+      setDropTargetId,
+      dropAction,
+      setDropAction,
+    }}>
+      <Sidebar>
+        <SidebarHeader className="p-4 border-b">
+          <div className="flex items-center gap-3">
+            <pre className="ascii-art text-sm">
 {`╔═══╗
 ║OCR║
 ║███║
 ╚═══╝`}
-          </pre>
-          <h2 className="font-semibold text-base">
-            <span className="headline-highlight">OCRSenseiWeb</span>
-          </h2>
-        </div>
-      </SidebarHeader>
-
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>DIRECTORY TREE</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => setLocation("/")}
-                  className="hover-elevate active-elevate-2"
-                  data-testid="nav-dashboard"
-                >
-                  <Home className="h-4 w-4" />
-                  <span>Dashboard</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => setLocation("/search")}
-                  className="hover-elevate active-elevate-2"
-                  data-testid="nav-search"
-                >
-                  <Search className="h-4 w-4" />
-                  <span>Search</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => setLocation("/projects")}
-                  className="hover-elevate active-elevate-2"
-                  data-testid="nav-projects"
-                >
-                  <FolderOpen className="h-4 w-4" />
-                  <span>Projects</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <div className="flex items-center justify-between px-3 py-2">
-            <SidebarGroupLabel>Browse/</SidebarGroupLabel>
-            <button
-              onClick={() => setEditMode(!editMode)}
-              className="text-xs px-2 py-1 rounded hover-elevate active-elevate-2 flex items-center gap-1 font-semibold"
-              data-testid="button-toggle-edit-mode"
-            >
-              {editMode ? (
-                <>
-                  <Save className="h-3 w-3" />
-                  Done
-                </>
-              ) : (
-                <>
-                  <Edit3 className="h-3 w-3" />
-                  Edit
-                </>
-              )}
-            </button>
+            </pre>
+            <h2 className="font-semibold text-base">
+              <span className="headline-highlight">OCRSenseiWeb</span>
+            </h2>
           </div>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {!projects || projects.length === 0 ? (
-                <div className="px-3 py-2 text-xs text-muted-foreground">
-                  No projects yet
-                </div>
-              ) : (
-                projects.map((project) => {
-                  const isDragging = draggedProject === project.id;
-                  const isDropTarget = dropTargetProject === project.id;
-                  
-                  return (
-                    <div key={project.id}>
-                      <SidebarMenuItem>
-                        <div
-                          draggable={editMode}
-                          onDragStart={(e) => handleDragStart(e, project.id)}
-                          onDragOver={(e) => handleDragOver(e, project.id)}
-                          onDragLeave={handleDragLeave}
-                          onDrop={(e) => handleDrop(e, project.id)}
-                          className={`${isDragging ? 'opacity-50' : ''} ${editMode ? 'cursor-move' : ''} ${
-                            isDropTarget ? 'bg-primary/10 rounded' : ''
-                          }`}
-                        >
-                          <SidebarMenuButton
-                            onClick={() => !editMode && toggleProject(project.id)}
-                            className="hover-elevate active-elevate-2"
-                            data-testid={`nav-project-${project.id}`}
+        </SidebarHeader>
+
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>DIRECTORY TREE</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setLocation("/")}
+                    className="hover-elevate active-elevate-2"
+                    data-testid="nav-dashboard"
+                  >
+                    <Home className="h-4 w-4" />
+                    <span>Dashboard</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setLocation("/search")}
+                    className="hover-elevate active-elevate-2"
+                    data-testid="nav-search"
+                  >
+                    <Search className="h-4 w-4" />
+                    <span>Search</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setLocation("/projects")}
+                    className="hover-elevate active-elevate-2"
+                    data-testid="nav-projects"
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                    <span>Projects</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          <SidebarGroup>
+            <div className="flex items-center justify-between px-3 py-2">
+              <SidebarGroupLabel>Browse/</SidebarGroupLabel>
+              <button
+                onClick={() => setEditMode(!editMode)}
+                className="text-xs px-2 py-1 rounded hover-elevate active-elevate-2 flex items-center gap-1 font-semibold"
+                data-testid="button-toggle-edit-mode"
+              >
+                {editMode ? (
+                  <>
+                    <Save className="h-3 w-3" />
+                    Done
+                  </>
+                ) : (
+                  <>
+                    <Edit3 className="h-3 w-3" />
+                    Edit
+                  </>
+                )}
+              </button>
+            </div>
+            <SidebarGroupContent
+              onDragOver={editMode ? handleProjectListDragOver : undefined}
+              onDrop={editMode ? handleProjectListDrop : undefined}
+              onDragLeave={() => {
+                if (dropTargetId === -1) {
+                  setDropTargetId(null);
+                  setDropAction(null);
+                }
+              }}
+              className={dropAction === 'convert-to-project' && dropTargetId === -1 ? 'bg-purple-500/10 border-2 border-purple-500 rounded-md mx-2' : ''}
+            >
+              <SidebarMenu>
+                {!projects || projects.length === 0 ? (
+                  <div className="px-3 py-2 text-xs text-muted-foreground">
+                    No projects yet
+                  </div>
+                ) : (
+                  projects.map((project) => {
+                    const isDragging = draggedItem?.type === 'project' && draggedItem.id === project.id;
+                    const dropIndicator = getProjectDropIndicator(project.id);
+                    
+                    return (
+                      <div key={project.id}>
+                        <SidebarMenuItem>
+                          <div
+                            draggable={editMode}
+                            onDragStart={(e) => handleProjectDragStart(e, project)}
+                            onDragOver={(e) => handleProjectDragOver(e, project)}
+                            onDragLeave={handleProjectDragLeave}
+                            onDrop={(e) => handleProjectDrop(e, project)}
+                            className={`${isDragging ? 'opacity-50' : ''} ${editMode ? 'cursor-move' : ''} ${dropIndicator || ''}`}
                           >
-                            <div className="flex items-center gap-2 flex-1">
-                              {editMode && <GripVertical className="h-3 w-3 text-muted-foreground" />}
-                              <ChevronRight
-                                className={`h-4 w-4 transition-transform ${
-                                  expandedProjects.has(project.id) ? "rotate-90" : ""
-                                }`}
-                              />
-                              <FolderOpen className="h-4 w-4" />
-                              <span>{project.name}/</span>
-                            </div>
-                          </SidebarMenuButton>
-                        </div>
-                      </SidebarMenuItem>
+                            <SidebarMenuButton
+                              onClick={() => !editMode && toggleProject(project.id)}
+                              className="hover-elevate active-elevate-2"
+                              data-testid={`nav-project-${project.id}`}
+                            >
+                              <div className="flex items-center gap-2 flex-1">
+                                {editMode && <GripVertical className="h-3 w-3 text-muted-foreground" />}
+                                <ChevronRight
+                                  className={`h-4 w-4 transition-transform ${
+                                    expandedProjects.has(project.id) ? "rotate-90" : ""
+                                  }`}
+                                />
+                                <FolderOpen className="h-4 w-4" />
+                                <span>{project.name}/</span>
+                              </div>
+                            </SidebarMenuButton>
+                          </div>
+                        </SidebarMenuItem>
 
-                      {expandedProjects.has(project.id) && (
-                        <ProjectDirectories projectId={project.id} projectSlug={project.slug} editMode={editMode} />
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+                        {expandedProjects.has(project.id) && (
+                          <ProjectDirectories 
+                            projectId={project.id} 
+                            projectSlug={project.slug} 
+                            editMode={editMode} 
+                          />
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => setLocation("/settings")}
-              className="hover-elevate active-elevate-2"
-              data-testid="nav-settings"
-            >
-              <Settings className="h-4 w-4" />
-              <span>Settings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <SidebarFooter className="p-4 border-t">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => setLocation("/settings")}
+                className="hover-elevate active-elevate-2"
+                data-testid="nav-settings"
+              >
+                <Settings className="h-4 w-4" />
+                <span>Settings</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
 
-        <div className="mt-4 space-y-1">
-          <div className="text-xs font-mono">
-            <span className="text-primary">[OK]</span>
+          <div className="mt-4 space-y-1">
+            <div className="text-xs font-mono">
+              <span className="text-primary">[OK]</span>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Online
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Up: 99.9%
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Active
+            </div>
           </div>
-          <div className="text-xs text-muted-foreground">
-            Online
-          </div>
-          <div className="text-xs text-muted-foreground">
-            Up: 99.9%
-          </div>
-          <div className="text-xs text-muted-foreground">
-            Active
-          </div>
-        </div>
-      </SidebarFooter>
-    </Sidebar>
+        </SidebarFooter>
+      </Sidebar>
+    </DragContext.Provider>
   );
 }
 
 function ProjectDirectories({ projectId, projectSlug, editMode }: { projectId: number; projectSlug: string; editMode: boolean }) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [draggedDir, setDraggedDir] = useState<number | null>(null);
+  const dragContext = useContext(DragContext);
   const [dropTargetDir, setDropTargetDir] = useState<number | null>(null);
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'inside' | null>(null);
 
   const { data: directories } = useQuery<Directory[]>({
     queryKey: [`/api/p/${projectSlug}/directories`],
   });
-
-  // Removed ASCII art for subdirectories - using icons instead
 
   if (!directories || directories.length === 0) {
     return (
@@ -306,22 +456,32 @@ function ProjectDirectories({ projectId, projectSlug, editMode }: { projectId: n
   const buildTree = (parentId: number | null = null, level = 0): DirectoryNode[] => {
     return directories
       .filter(dir => dir.parentId === parentId)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
       .map(dir => ({
         ...dir,
         children: buildTree(dir.id, level + 1)
       }));
   };
 
-  const handleDragStart = (e: React.DragEvent, dirId: number) => {
-    setDraggedDir(dirId);
+  const handleDragStart = (e: React.DragEvent, dir: Directory) => {
+    dragContext.setDraggedItem({ 
+      type: 'directory', 
+      id: dir.id, 
+      data: dir, 
+      projectSlug 
+    });
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragOver = (e: React.DragEvent, targetDirId: number) => {
+  const handleDragOver = (e: React.DragEvent, targetDir: Directory) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     
-    if (!draggedDir || draggedDir === targetDirId) return;
+    if (!dragContext.draggedItem || !editMode) return;
+
+    // Only handle directory-to-directory drops
+    if (dragContext.draggedItem.type !== 'directory') return;
+    if (dragContext.draggedItem.id === targetDir.id) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const mouseY = e.clientY - rect.top;
@@ -331,14 +491,19 @@ function ProjectDirectories({ projectId, projectSlug, editMode }: { projectId: n
     // Top 25%: before, Middle 50%: inside, Bottom 25%: after
     if (mouseY < elementHeight * 0.25) {
       setDropPosition('before');
-      setDropTargetDir(targetDirId);
+      setDropTargetDir(targetDir.id);
+      dragContext.setDropAction('reorder');
     } else if (mouseY > elementHeight * 0.75) {
       setDropPosition('after');
-      setDropTargetDir(targetDirId);
+      setDropTargetDir(targetDir.id);
+      dragContext.setDropAction('reorder');
     } else {
       setDropPosition('inside');
-      setDropTargetDir(targetDirId);
+      setDropTargetDir(targetDir.id);
+      dragContext.setDropAction('change-parent');
     }
+    
+    dragContext.setDropTargetId(targetDir.id);
   };
 
   const handleDragLeave = () => {
@@ -346,15 +511,17 @@ function ProjectDirectories({ projectId, projectSlug, editMode }: { projectId: n
     setDropPosition(null);
   };
 
-  const handleDrop = async (e: React.DragEvent, targetDirId: number) => {
+  const handleDrop = async (e: React.DragEvent, targetDir: Directory) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!draggedDir || draggedDir === targetDirId || !directories) return;
+    
+    if (!dragContext.draggedItem || dragContext.draggedItem.type !== 'directory') return;
+    if (dragContext.draggedItem.id === targetDir.id || !directories) return;
 
-    const draggedDirectory = directories.find(d => d.id === draggedDir);
-    const targetDirectory = directories.find(d => d.id === targetDirId);
+    const draggedDirectory = directories.find(d => d.id === dragContext.draggedItem!.id);
+    const targetDirectory = targetDir;
 
-    if (!draggedDirectory || !targetDirectory) return;
+    if (!draggedDirectory) return;
 
     const currentPosition = dropPosition || 'inside';
 
@@ -369,23 +536,24 @@ function ProjectDirectories({ projectId, projectSlug, editMode }: { projectId: n
           return parent ? isDescendant(parent.parentId, ancestorId) : false;
         };
 
-        if (isDescendant(targetDirId, draggedDir)) {
+        if (isDescendant(targetDirectory.id, draggedDirectory.id)) {
           toast({
             variant: "destructive",
             title: "Invalid Move",
             description: "Cannot move a directory into itself or its descendants",
           });
-          setDraggedDir(null);
+          dragContext.setDraggedItem(null);
           setDropTargetDir(null);
           setDropPosition(null);
+          dragContext.setDropAction(null);
           return;
         }
 
         // Build new path
         const newPath = `${targetDirectory.path}/${draggedDirectory.name}`;
         
-        await apiRequest("POST", `/api/directories/${draggedDir}/change-parent`, {
-          newParentId: targetDirId,
+        await apiRequest("POST", `/api/directories/${draggedDirectory.id}/change-parent`, {
+          newParentId: targetDirectory.id,
           newPath,
         });
 
@@ -403,9 +571,10 @@ function ProjectDirectories({ projectId, projectSlug, editMode }: { projectId: n
             title: "Cannot Reorder",
             description: "Can only reorder directories at the same level",
           });
-          setDraggedDir(null);
+          dragContext.setDraggedItem(null);
           setDropTargetDir(null);
           setDropPosition(null);
+          dragContext.setDropAction(null);
           return;
         }
 
@@ -414,10 +583,10 @@ function ProjectDirectories({ projectId, projectSlug, editMode }: { projectId: n
         const targetOrder = targetDirectory.sortOrder ?? 0;
 
         await Promise.all([
-          apiRequest("POST", `/api/directories/${draggedDir}/reorder`, {
+          apiRequest("POST", `/api/directories/${draggedDirectory.id}/reorder`, {
             sortOrder: targetOrder,
           }),
-          apiRequest("POST", `/api/directories/${targetDirId}/reorder`, {
+          apiRequest("POST", `/api/directories/${targetDirectory.id}/reorder`, {
             sortOrder: draggedOrder,
           }),
         ]);
@@ -437,14 +606,15 @@ function ProjectDirectories({ projectId, projectSlug, editMode }: { projectId: n
       });
     }
 
-    setDraggedDir(null);
+    dragContext.setDraggedItem(null);
     setDropTargetDir(null);
     setDropPosition(null);
+    dragContext.setDropAction(null);
   };
   
   const renderDirectory = (dir: DirectoryNode, level: number, index: number): JSX.Element => {
     const indent = level * 16; // 16px per level
-    const isDragging = draggedDir === dir.id;
+    const isDragging = dragContext.draggedItem?.type === 'directory' && dragContext.draggedItem.id === dir.id;
     const isDropTarget = dropTargetDir === dir.id;
     const showDropIndicator = isDropTarget && dropPosition;
 
@@ -461,10 +631,10 @@ function ProjectDirectories({ projectId, projectSlug, editMode }: { projectId: n
         <SidebarMenuItem>
           <div
             draggable={editMode}
-            onDragStart={(e) => handleDragStart(e, dir.id)}
-            onDragOver={(e) => handleDragOver(e, dir.id)}
+            onDragStart={(e) => handleDragStart(e, dir)}
+            onDragOver={(e) => handleDragOver(e, dir)}
             onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, dir.id)}
+            onDrop={(e) => handleDrop(e, dir)}
             className={`${isDragging ? 'opacity-50' : ''} ${editMode ? 'cursor-move' : ''} ${
               showDropIndicator && dropPosition === 'inside' ? 'bg-primary/10 rounded' : ''
             }`}
