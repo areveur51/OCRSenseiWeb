@@ -26,6 +26,8 @@ interface OcrResult {
 export class OcrProcessor {
   private processing = false;
   private queue: number[] = [];
+  private workerCount = 2;
+  private activeWorkers = 0;
 
   async processImage(imageId: number): Promise<OcrResult> {
     const image = await storage.getImage(imageId);
@@ -45,6 +47,8 @@ export class OcrProcessor {
       upscale: settings.ocrUpscale === 1,
       denoise: settings.ocrDenoise === 1,
       deskew: settings.ocrDeskew === 1,
+      performancePreset: settings.ocrPerformancePreset || 'balanced',
+      enableCache: settings.ocrEnableCache === 1,
     };
 
     let imagePath: string;
@@ -67,6 +71,10 @@ export class OcrProcessor {
 
     const pythonScript = path.join(process.cwd(), "server", "ocr-service.py");
     const configJson = JSON.stringify(ocrConfig);
+    
+    if (!imagePath) {
+      throw new Error("Image path is required");
+    }
 
     return new Promise((resolve, reject) => {
       const pythonProcess = spawn("python3", [pythonScript, imagePath, configJson]);
@@ -176,7 +184,29 @@ export class OcrProcessor {
     }
 
     this.processing = true;
+    
+    // Get worker count from settings
+    try {
+      const settings = await storage.getSettings();
+      this.workerCount = settings.ocrWorkerCount || 2;
+      console.log(`OCR processor starting with ${this.workerCount} concurrent workers`);
+    } catch (error) {
+      console.error("Failed to load worker count from settings, using default:", error);
+      this.workerCount = 2;
+    }
 
+    // Start multiple concurrent workers
+    const workers = [];
+    for (let i = 0; i < this.workerCount; i++) {
+      workers.push(this.worker(i));
+    }
+
+    await Promise.all(workers);
+  }
+
+  private async worker(workerId: number): Promise<void> {
+    console.log(`OCR worker ${workerId} started`);
+    
     while (this.processing) {
       try {
         const queuedItems = await storage.getQueuedItems();
@@ -186,16 +216,31 @@ export class OcrProcessor {
           continue;
         }
 
-        const item = queuedItems[0];
-        console.log(`Processing OCR queue item ${item.id} for image ${item.imageId}`);
+        // Find first item not being processed by another worker
+        const item = queuedItems.find(item => item.status === 'pending');
         
-        await this.processQueueItem(item.id);
-        console.log(`Completed OCR queue item ${item.id}`);
+        if (!item) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          continue;
+        }
+
+        this.activeWorkers++;
+        console.log(`Worker ${workerId} processing OCR queue item ${item.id} for image ${item.imageId} (${this.activeWorkers}/${this.workerCount} workers active)`);
+        
+        try {
+          await this.processQueueItem(item.id);
+          console.log(`Worker ${workerId} completed OCR queue item ${item.id}`);
+        } finally {
+          this.activeWorkers--;
+        }
       } catch (error) {
-        console.error("Error processing queue:", error);
+        console.error(`Worker ${workerId} error processing queue:`, error);
+        this.activeWorkers--;
         await new Promise((resolve) => setTimeout(resolve, 5000));
       }
     }
+    
+    console.log(`OCR worker ${workerId} stopped`);
   }
 
   stopProcessing(): void {

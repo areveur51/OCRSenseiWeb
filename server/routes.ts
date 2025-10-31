@@ -713,6 +713,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Batch OCR Processing
+  app.post("/api/images/batch/process", async (req, res) => {
+    try {
+      const { imageIds } = req.body;
+      
+      if (!Array.isArray(imageIds) || imageIds.length === 0) {
+        return res.status(400).json({ error: "imageIds must be a non-empty array" });
+      }
+      
+      if (imageIds.length > 100) {
+        return res.status(400).json({ error: "Maximum 100 images per batch" });
+      }
+      
+      const queuedItems = [];
+      const errors = [];
+      
+      for (const id of imageIds) {
+        try {
+          const image = await storage.getImage(parseInt(id));
+          
+          if (!image) {
+            errors.push({ imageId: id, error: "Image not found" });
+            continue;
+          }
+          
+          let queueItem = await storage.getQueueItemByImage(parseInt(id));
+          
+          if (!queueItem) {
+            queueItem = await storage.createQueueItem({
+              imageId: parseInt(id),
+              status: "pending",
+              priority: 1,
+              attempts: 0,
+              errorMessage: null,
+            });
+          } else {
+            await storage.updateQueueItem(queueItem.id, {
+              status: "pending",
+              priority: 1,
+            });
+          }
+          
+          queuedItems.push(queueItem);
+        } catch (error: any) {
+          errors.push({ imageId: id, error: error.message });
+        }
+      }
+      
+      res.json({ 
+        message: `Batch queued: ${queuedItems.length} images`,
+        queued: queuedItems.length,
+        failed: errors.length,
+        queuedItems,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/processing-queue", async (req, res) => {
     try {
       const queuedItems = await storage.getQueuedItems();

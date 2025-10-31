@@ -6,10 +6,24 @@ from PIL import Image
 import os
 import cv2
 import numpy as np
+import hashlib
+from concurrent.futures import ThreadPoolExecutor
+import tempfile
 
-def preprocess_image(image_path, enable_preprocessing=True, enable_upscale=True, enable_denoise=True, enable_deskew=True):
+def get_image_hash(image_path):
+    """Generate hash for image to use as cache key"""
+    with open(image_path, 'rb') as f:
+        return hashlib.md5(f.read()).hexdigest()
+
+def get_cache_path(image_hash, preprocessing_config):
+    """Get cache file path for preprocessed image"""
+    cache_key = f"{image_hash}_{preprocessing_config}"
+    cache_hash = hashlib.md5(cache_key.encode()).hexdigest()
+    return os.path.join(tempfile.gettempdir(), f"ocr_cache_{cache_hash}.png")
+
+def preprocess_image(image_path, enable_preprocessing=True, enable_upscale=True, enable_denoise=True, enable_deskew=True, enable_cache=True):
     """
-    Preprocess image for optimal OCR accuracy using OpenCV
+    Preprocess image for optimal OCR accuracy using OpenCV with caching
     
     Args:
         image_path: Path to input image
@@ -17,6 +31,7 @@ def preprocess_image(image_path, enable_preprocessing=True, enable_upscale=True,
         enable_upscale: Upscale image for better small text recognition
         enable_denoise: Remove noise from image
         enable_deskew: Correct skew/rotation
+        enable_cache: Enable preprocessing cache
     
     Returns:
         PIL Image ready for OCR
@@ -25,6 +40,15 @@ def preprocess_image(image_path, enable_preprocessing=True, enable_upscale=True,
         return Image.open(image_path)
     
     try:
+        # Check cache if enabled
+        if enable_cache:
+            image_hash = get_image_hash(image_path)
+            preprocessing_config = f"{enable_upscale}_{enable_denoise}_{enable_deskew}"
+            cache_path = get_cache_path(image_hash, preprocessing_config)
+            
+            if os.path.exists(cache_path):
+                return Image.open(cache_path)
+        
         # Read image with OpenCV
         img = cv2.imread(image_path)
         
@@ -65,13 +89,61 @@ def preprocess_image(image_path, enable_preprocessing=True, enable_upscale=True,
                                            flags=cv2.INTER_CUBIC, 
                                            borderMode=cv2.BORDER_REPLICATE)
         
-        # Convert back to PIL Image
-        return Image.fromarray(binary)
+        # Convert to PIL Image
+        processed_img = Image.fromarray(binary)
+        
+        # Save to cache if enabled
+        if enable_cache:
+            try:
+                processed_img.save(cache_path, 'PNG')
+            except Exception as cache_error:
+                print(f"Cache save warning: {str(cache_error)}", file=sys.stderr)
+        
+        return processed_img
         
     except Exception as e:
         # If preprocessing fails, fallback to original image
         print(f"Preprocessing warning: {str(e)}", file=sys.stderr)
         return Image.open(image_path)
+
+def apply_performance_preset(cfg, preset):
+    """
+    Apply performance preset to configuration
+    
+    Presets:
+    - fast: Minimal preprocessing, PSM 6 only, no upscale/denoise/deskew
+    - balanced: Standard preprocessing with upscale, dual PSM (6 and 3)
+    - accurate: Maximum preprocessing with upscale, denoise, deskew, dual PSM
+    """
+    if preset == 'fast':
+        cfg['upscale'] = False
+        cfg['denoise'] = False
+        cfg['deskew'] = False
+        cfg['psm2'] = cfg['psm1']  # Skip second pass by using same PSM
+    elif preset == 'balanced':
+        cfg['upscale'] = True
+        cfg['denoise'] = False
+        cfg['deskew'] = False
+    elif preset == 'accurate':
+        cfg['upscale'] = True
+        cfg['denoise'] = True
+        cfg['deskew'] = True
+    return cfg
+
+def run_tesseract_pass(img, config_str):
+    """Run single Tesseract pass and return results"""
+    data = pytesseract.image_to_data(img, config=config_str, output_type=pytesseract.Output.DICT)
+    text = pytesseract.image_to_string(img, config=config_str)
+    
+    # Calculate average confidence
+    conf_values = [int(conf) for conf in data['conf'] if conf != '-1' and int(conf) > 0]
+    avg_conf = sum(conf_values) // len(conf_values) if conf_values else 0
+    
+    return {
+        'data': data,
+        'text': text,
+        'confidence': avg_conf
+    }
 
 def process_image(image_path, config=None):
     """
@@ -87,6 +159,8 @@ def process_image(image_path, config=None):
             - upscale: Enable upscaling (boolean)
             - denoise: Enable denoising (boolean)
             - deskew: Enable deskewing (boolean)
+            - performancePreset: Performance preset (fast/balanced/accurate)
+            - enableCache: Enable preprocessing cache (boolean)
     
     Returns JSON with both results and consensus
     """
@@ -99,7 +173,9 @@ def process_image(image_path, config=None):
             'preprocessing': True,
             'upscale': True,
             'denoise': True,
-            'deskew': True
+            'deskew': True,
+            'performancePreset': 'balanced',
+            'enableCache': True
         }
         
         # Merge with provided config
@@ -108,31 +184,56 @@ def process_image(image_path, config=None):
         
         cfg = default_config
         
-        # Preprocess image
+        # Apply performance preset if specified
+        if 'performancePreset' in cfg and cfg['performancePreset']:
+            cfg = apply_performance_preset(cfg, cfg['performancePreset'])
+        
+        # Preprocess image (cached to avoid redundant operations)
         img = preprocess_image(
             image_path,
             enable_preprocessing=cfg['preprocessing'],
             enable_upscale=cfg['upscale'],
             enable_denoise=cfg['denoise'],
-            enable_deskew=cfg['deskew']
+            enable_deskew=cfg['deskew'],
+            enable_cache=cfg['enableCache']
         )
         
-        # Configuration 1: Using first PSM mode
-        config1 = f'--oem {cfg["oem"]} --psm {cfg["psm1"]}'
-        data1 = pytesseract.image_to_data(img, config=config1, output_type=pytesseract.Output.DICT)
-        text1 = pytesseract.image_to_string(img, config=config1)
+        # Configuration strings
+        config1_str = f'--oem {cfg["oem"]} --psm {cfg["psm1"]}'
         
-        # Configuration 2: Using second PSM mode
-        config2 = f'--oem {cfg["oem"]} --psm {cfg["psm2"]}'
-        data2 = pytesseract.image_to_data(img, config=config2, output_type=pytesseract.Output.DICT)
-        text2 = pytesseract.image_to_string(img, config=config2)
+        # Check if we should run dual pass or single pass (Fast mode)
+        run_dual_pass = cfg['psm1'] != cfg['psm2']
         
-        # Calculate average confidence for each configuration
-        conf1_values = [int(conf) for conf in data1['conf'] if conf != '-1' and int(conf) > 0]
-        conf2_values = [int(conf) for conf in data2['conf'] if conf != '-1' and int(conf) > 0]
-        
-        avg_conf1 = sum(conf1_values) // len(conf1_values) if conf1_values else 0
-        avg_conf2 = sum(conf2_values) // len(conf2_values) if conf2_values else 0
+        if run_dual_pass:
+            # Run both passes concurrently for better performance
+            config2_str = f'--oem {cfg["oem"]} --psm {cfg["psm2"]}'
+            
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                future1 = executor.submit(run_tesseract_pass, img, config1_str)
+                future2 = executor.submit(run_tesseract_pass, img, config2_str)
+                
+                result1 = future1.result()
+                result2 = future2.result()
+            
+            data1 = result1['data']
+            text1 = result1['text']
+            avg_conf1 = result1['confidence']
+            
+            data2 = result2['data']
+            text2 = result2['text']
+            avg_conf2 = result2['confidence']
+        else:
+            # Fast mode: Single pass only
+            result1 = run_tesseract_pass(img, config1_str)
+            
+            data1 = result1['data']
+            text1 = result1['text']
+            avg_conf1 = result1['confidence']
+            
+            # Use same result for both to maintain consistent output format
+            data2 = data1
+            text2 = text1
+            avg_conf2 = avg_conf1
         
         # Determine consensus (higher confidence wins)
         if avg_conf1 >= avg_conf2:

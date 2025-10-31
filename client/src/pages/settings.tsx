@@ -27,6 +27,9 @@ export default function Settings() {
   const [ocrUpscale, setOcrUpscale] = useState<number | null>(null);
   const [ocrDenoise, setOcrDenoise] = useState<number | null>(null);
   const [ocrDeskew, setOcrDeskew] = useState<number | null>(null);
+  const [ocrPerformancePreset, setOcrPerformancePreset] = useState<string | null>(null);
+  const [ocrWorkerCount, setOcrWorkerCount] = useState<number | null>(null);
+  const [ocrEnableCache, setOcrEnableCache] = useState<number | null>(null);
 
   const { data: settings, isLoading } = useQuery<SettingsType>({
     queryKey: ["/api/settings"],
@@ -42,6 +45,9 @@ export default function Settings() {
       setOcrUpscale(settings.ocrUpscale);
       setOcrDenoise(settings.ocrDenoise);
       setOcrDeskew(settings.ocrDeskew);
+      setOcrPerformancePreset(settings.ocrPerformancePreset);
+      setOcrWorkerCount(settings.ocrWorkerCount);
+      setOcrEnableCache(settings.ocrEnableCache);
     }
   }, [settings, fuzzyVariations]);
 
@@ -91,6 +97,15 @@ export default function Settings() {
     if (ocrDeskew !== null && ocrDeskew !== settings?.ocrDeskew) {
       updates.ocrDeskew = ocrDeskew;
     }
+    if (ocrPerformancePreset !== null && ocrPerformancePreset !== settings?.ocrPerformancePreset) {
+      updates.ocrPerformancePreset = ocrPerformancePreset as any;
+    }
+    if (ocrWorkerCount !== null && ocrWorkerCount !== settings?.ocrWorkerCount) {
+      updates.ocrWorkerCount = ocrWorkerCount;
+    }
+    if (ocrEnableCache !== null && ocrEnableCache !== settings?.ocrEnableCache) {
+      updates.ocrEnableCache = ocrEnableCache;
+    }
     
     if (Object.keys(updates).length > 0) {
       updateMutation.mutate(updates);
@@ -106,7 +121,10 @@ export default function Settings() {
     (ocrPreprocessing !== null && ocrPreprocessing !== settings.ocrPreprocessing) ||
     (ocrUpscale !== null && ocrUpscale !== settings.ocrUpscale) ||
     (ocrDenoise !== null && ocrDenoise !== settings.ocrDenoise) ||
-    (ocrDeskew !== null && ocrDeskew !== settings.ocrDeskew)
+    (ocrDeskew !== null && ocrDeskew !== settings.ocrDeskew) ||
+    (ocrPerformancePreset !== null && ocrPerformancePreset !== settings.ocrPerformancePreset) ||
+    (ocrWorkerCount !== null && ocrWorkerCount !== settings.ocrWorkerCount) ||
+    (ocrEnableCache !== null && ocrEnableCache !== settings.ocrEnableCache)
   );
 
   return (
@@ -618,6 +636,183 @@ export default function Settings() {
                 </p>
               </div>
             </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Performance Optimization Section */}
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">
+            <span className="headline-highlight">PERFORMANCE OPTIMIZATION</span>
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            &gt; Configure OCR processing speed and concurrency_
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Performance Presets */}
+          <Card className="p-6">
+            <div className="flex items-start gap-3 mb-6">
+              <pre className="ascii-art text-sm opacity-80">
+{`╔═══╗
+║ ⚡ ║
+╚═══╝`}
+              </pre>
+              <div>
+                <h3 className="text-lg font-semibold">
+                  <span className="headline-highlight">PERFORMANCE PRESET</span>
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Speed vs Accuracy trade-off
+                </p>
+              </div>
+            </div>
+
+            {isLoading ? (
+              <div className="text-sm text-muted-foreground">Loading settings...</div>
+            ) : (
+              <div className="space-y-4">
+                <RadioGroup
+                  value={ocrPerformancePreset ?? settings?.ocrPerformancePreset ?? 'balanced'}
+                  onValueChange={(value) => setOcrPerformancePreset(value)}
+                  data-testid="radiogroup-performance-preset"
+                >
+                  <div className="flex items-start space-x-3 p-3 rounded-md hover-elevate active-elevate-2">
+                    <RadioGroupItem value="fast" id="preset-fast" data-testid="radio-preset-fast" />
+                    <div className="flex-1 space-y-1">
+                      <Label htmlFor="preset-fast" className="font-medium cursor-pointer">
+                        Fast Mode
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Minimal preprocessing, single PSM pass - 2-3x faster but may reduce accuracy
+                      </p>
+                      <div className="flex gap-2 flex-wrap mt-2">
+                        <Badge variant="secondary" className="text-xs">Speed: High</Badge>
+                        <Badge variant="secondary" className="text-xs">Quality: Lower</Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3 p-3 rounded-md hover-elevate active-elevate-2">
+                    <RadioGroupItem value="balanced" id="preset-balanced" data-testid="radio-preset-balanced" />
+                    <div className="flex-1 space-y-1">
+                      <Label htmlFor="preset-balanced" className="font-medium cursor-pointer">
+                        Balanced Mode
+                        {(ocrPerformancePreset ?? settings?.ocrPerformancePreset) === 'balanced' && (
+                          <Badge variant="outline" className="ml-2">
+                            <Check className="h-3 w-3 mr-1" />
+                            Recommended
+                          </Badge>
+                        )}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Standard preprocessing with upscaling, dual PSM verification - optimal for most cases
+                      </p>
+                      <div className="flex gap-2 flex-wrap mt-2">
+                        <Badge variant="secondary" className="text-xs">Speed: Medium</Badge>
+                        <Badge variant="secondary" className="text-xs">Quality: Good</Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3 p-3 rounded-md hover-elevate active-elevate-2">
+                    <RadioGroupItem value="accurate" id="preset-accurate" data-testid="radio-preset-accurate" />
+                    <div className="flex-1 space-y-1">
+                      <Label htmlFor="preset-accurate" className="font-medium cursor-pointer">
+                        Accurate Mode
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Full preprocessing (upscale + denoise + deskew), dual PSM - best quality, slower processing
+                      </p>
+                      <div className="flex gap-2 flex-wrap mt-2">
+                        <Badge variant="secondary" className="text-xs">Speed: Lower</Badge>
+                        <Badge variant="secondary" className="text-xs">Quality: Highest</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+          </Card>
+
+          {/* Worker Configuration */}
+          <Card className="p-6">
+            <div className="flex items-start gap-3 mb-6">
+              <pre className="ascii-art text-sm opacity-80">
+{`╔═══╗
+║ ⚙ ║
+╚═══╝`}
+              </pre>
+              <div>
+                <h3 className="text-lg font-semibold">
+                  <span className="headline-highlight">WORKER CONFIGURATION</span>
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Concurrent processing settings
+                </p>
+              </div>
+            </div>
+
+            {isLoading ? (
+              <div className="text-sm text-muted-foreground">Loading settings...</div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    Concurrent Workers
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Number of images to process simultaneously (1-8)
+                  </p>
+                  <RadioGroup
+                    value={(ocrWorkerCount ?? settings?.ocrWorkerCount ?? 2).toString()}
+                    onValueChange={(value) => setOcrWorkerCount(parseInt(value))}
+                    data-testid="radiogroup-worker-count"
+                  >
+                    <div className="grid grid-cols-4 gap-2">
+                      {[1, 2, 3, 4].map((count) => (
+                        <div key={count} className="flex items-center space-x-2 p-2 rounded hover-elevate">
+                          <RadioGroupItem value={count.toString()} id={`workers-${count}`} />
+                          <Label htmlFor={`workers-${count}`} className="text-xs cursor-pointer">
+                            {count} {count === 1 ? 'worker' : 'workers'}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </RadioGroup>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Higher worker count = faster batch processing but more CPU usage
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded hover-elevate">
+                  <div className="space-y-1">
+                    <Label htmlFor="enable-cache" className="font-medium cursor-pointer">
+                      Enable Preprocessing Cache
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Cache preprocessed images to speed up reprocessing
+                    </p>
+                  </div>
+                  <Switch
+                    id="enable-cache"
+                    checked={(ocrEnableCache ?? settings?.ocrEnableCache) === 1}
+                    onCheckedChange={(checked) => setOcrEnableCache(checked ? 1 : 0)}
+                    data-testid="switch-cache"
+                  />
+                </div>
+
+                <div className="pt-3 border-t">
+                  <div className="p-3 rounded bg-primary/10 border border-primary/20">
+                    <p className="text-xs">
+                      <strong className="text-primary">Performance Tip:</strong> Use 2 workers with cache enabled for best balance of speed and reliability. Increase workers for large batch processing.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </Card>
         </div>
       </div>
