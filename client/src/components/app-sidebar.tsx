@@ -75,18 +75,25 @@ export function AppSidebar() {
     if (!draggedProj || !targetProj) return;
 
     try {
-      // Swap sortOrder values
-      const draggedOrder = draggedProj.sortOrder ?? 0;
-      const targetOrder = targetProj.sortOrder ?? 0;
+      // Create new order by moving dragged project to target position
+      const projectList = [...projects];
+      const draggedIndex = projectList.findIndex(p => p.id === draggedProject);
+      const targetIndex = projectList.findIndex(p => p.id === targetProjectId);
+      
+      // Remove dragged project from current position
+      const [movedProject] = projectList.splice(draggedIndex, 1);
+      
+      // Insert at target position
+      projectList.splice(targetIndex, 0, movedProject);
+      
+      // Assign new sequential sortOrder values (1, 2, 3, ...)
+      const updates = projectList.map((project, index) => 
+        apiRequest("POST", `/api/projects/${project.id}/reorder`, {
+          sortOrder: index + 1,
+        })
+      );
 
-      await Promise.all([
-        apiRequest("POST", `/api/projects/${draggedProject}/reorder`, {
-          sortOrder: targetOrder,
-        }),
-        apiRequest("POST", `/api/projects/${targetProjectId}/reorder`, {
-          sortOrder: draggedOrder,
-        }),
-      ]);
+      await Promise.all(updates);
 
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
 

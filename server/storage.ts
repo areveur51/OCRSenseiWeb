@@ -111,7 +111,16 @@ export class DbStorage implements IStorage {
   }
 
   async createProject(project: InsertProject): Promise<Project> {
-    const [newProject] = await db.insert(projects).values(project).returning();
+    // Assign next sortOrder value (max + 1) to ensure new projects appear at end
+    const maxSortOrder = await db
+      .select({ max: sql<number>`COALESCE(MAX(${projects.sortOrder}), 0)` })
+      .from(projects)
+      .then(rows => rows[0]?.max ?? 0);
+    
+    const [newProject] = await db
+      .insert(projects)
+      .values({ ...project, sortOrder: maxSortOrder + 1 })
+      .returning();
     return newProject;
   }
 
