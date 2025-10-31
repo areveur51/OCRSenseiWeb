@@ -32,11 +32,26 @@ export class OcrProcessor {
       throw new Error(`Image ${imageId} not found`);
     }
 
+    // Get OCR settings from database
+    const settings = await storage.getSettings();
+    
+    // Build OCR configuration
+    const ocrConfig = {
+      oem: settings.ocrEngineMode,
+      psm1: settings.ocrPsmConfig1,
+      psm2: settings.ocrPsmConfig2,
+      preprocessing: settings.ocrPreprocessing === 1,
+      upscale: settings.ocrUpscale === 1,
+      denoise: settings.ocrDenoise === 1,
+      deskew: settings.ocrDeskew === 1,
+    };
+
     const imagePath = fileStorage.getFilePath(image.filePath);
     const pythonScript = path.join(process.cwd(), "server", "ocr-service.py");
+    const configJson = JSON.stringify(ocrConfig);
 
     return new Promise((resolve, reject) => {
-      const pythonProcess = spawn("python3", [pythonScript, imagePath]);
+      const pythonProcess = spawn("python3", [pythonScript, imagePath, configJson]);
       let outputData = "";
       let errorData = "";
 
