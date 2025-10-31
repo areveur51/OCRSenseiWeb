@@ -44,6 +44,7 @@ export const directories = pgTable("directories", {
   slug: text("slug").notNull(),
   path: text("path").notNull(),
   parentId: integer("parent_id").references((): any => directories.id, { onDelete: "cascade" }),
+  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   projectIdIdx: index("directories_project_id_idx").on(table.projectId),

@@ -41,6 +41,7 @@ export interface IStorage {
   createDirectory(directory: InsertDirectory): Promise<Directory>;
   updateDirectory(id: number, updates: Partial<InsertDirectory>): Promise<Directory | undefined>;
   deleteDirectory(id: number): Promise<boolean>;
+  updateDirectoryOrder(directoryId: number, newSortOrder: number): Promise<boolean>;
 
   // Images
   getImagesByDirectory(directoryId: number): Promise<Image[]>;
@@ -134,7 +135,7 @@ export class DbStorage implements IStorage {
 
   // Directories
   async getDirectoriesByProject(projectId: number): Promise<Directory[]> {
-    return db.select().from(directories).where(eq(directories.projectId, projectId));
+    return db.select().from(directories).where(eq(directories.projectId, projectId)).orderBy(directories.sortOrder);
   }
 
   async getDirectory(id: number): Promise<Directory | undefined> {
@@ -166,6 +167,14 @@ export class DbStorage implements IStorage {
 
   async deleteDirectory(id: number): Promise<boolean> {
     const result = await db.delete(directories).where(eq(directories.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async updateDirectoryOrder(directoryId: number, newSortOrder: number): Promise<boolean> {
+    const result = await db
+      .update(directories)
+      .set({ sortOrder: newSortOrder })
+      .where(eq(directories.id, directoryId));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 

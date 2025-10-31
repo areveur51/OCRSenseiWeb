@@ -286,14 +286,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/directories/:id/reorder", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { sortOrder } = req.body;
+      
+      if (typeof sortOrder !== 'number') {
+        return res.status(400).json({ error: "sortOrder must be a number" });
+      }
+      
+      const success = await storage.updateDirectoryOrder(id, sortOrder);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Directory not found" });
+      }
+      
+      res.status(200).json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Images
   app.get("/api/directories/:directoryId/images", async (req, res) => {
     try {
       const directoryId = parseInt(req.params.directoryId);
-      const images = await storage.getImagesByDirectory(directoryId);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 25;
+      
+      const allImages = await storage.getImagesByDirectory(directoryId);
+      
+      // Apply pagination
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedImages = allImages.slice(startIndex, endIndex);
       
       const imagesWithOcr = await Promise.all(
-        images.map(async (image) => {
+        paginatedImages.map(async (image) => {
           const ocrResult = await storage.getOcrResultByImage(image.id);
           const queueItem = await storage.getQueueItemByImage(image.id);
           return {
@@ -304,7 +333,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
-      res.json(imagesWithOcr);
+      res.json({
+        images: imagesWithOcr,
+        pagination: {
+          page,
+          limit,
+          total: allImages.length,
+          totalPages: Math.ceil(allImages.length / limit),
+        },
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
