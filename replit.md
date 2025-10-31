@@ -12,6 +12,12 @@ OCRSenseiWeb is a Matrix-themed OCR application that extracts text from scanned 
 Preferred communication style: Simple, everyday language.
 
 ## Recent Updates (October 31, 2025)
+- ✅ **Project Management**: Added rename and delete functionality for projects
+  - Dropdown menu on project detail page (visible at project root) provides rename and delete options
+  - Renaming regenerates slug automatically and redirects to new URL
+  - Deleting cascades to all directories, images, and OCR results
+  - Confirmation dialogs prevent accidental deletions
+  - Fixed backend slug generation bug in `updateProject` method
 - ✅ **Shareable Human-Readable URLs**: Implemented slug-based URL system for all resources
   - Projects use `/p/:slug` pattern (e.g., `/p/31st-infantry-regiment`)
   - Directories use `/p/:projectSlug/:dirSlug` (e.g., `/p/31st-infantry-regiment/roster-1920`)
