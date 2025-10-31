@@ -39,7 +39,7 @@ interface ImageWithOcr extends Image {
 
 export default function ImageDetail() {
   const params = useParams();
-  const imageId = params.id ? parseInt(params.id) : null;
+  const { projectSlug, dirSlug, imageSlug } = params;
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
@@ -47,16 +47,16 @@ export default function ImageDetail() {
   const [newFilename, setNewFilename] = useState("");
 
   const { data: image } = useQuery<ImageWithOcr>({
-    queryKey: [`/api/images/${imageId}`],
-    enabled: !!imageId,
+    queryKey: [`/api/p/${projectSlug}/${dirSlug}/img/${imageSlug}`],
+    enabled: !!projectSlug && !!dirSlug && !!imageSlug,
   });
 
   const handleReprocess = async () => {
-    if (!imageId) return;
+    if (!image?.id) return;
 
     try {
-      await apiRequest("POST", `/api/images/${imageId}/process`);
-      queryClient.invalidateQueries({ queryKey: [`/api/images/${imageId}`] });
+      await apiRequest("POST", `/api/images/${image.id}/process`);
+      queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}/${dirSlug}/img/${imageSlug}`] });
       
       toast({
         title: "Reprocessing Started",
@@ -72,15 +72,15 @@ export default function ImageDetail() {
   };
 
   const handleRename = async () => {
-    if (!imageId || !newFilename.trim()) return;
+    if (!image?.id || !newFilename.trim()) return;
 
     try {
-      const response = await apiRequest("PATCH", `/api/images/${imageId}`, {
+      const response = await apiRequest("PATCH", `/api/images/${image.id}`, {
         filename: newFilename.trim(),
       });
       await response.json();
 
-      queryClient.invalidateQueries({ queryKey: [`/api/images/${imageId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}/${dirSlug}/img/${imageSlug}`] });
       if (image?.directoryId) {
         queryClient.invalidateQueries({ 
           queryKey: [`/api/directories/${image.directoryId}/images`] 
@@ -104,10 +104,10 @@ export default function ImageDetail() {
   };
 
   const handleDelete = async () => {
-    if (!imageId || !image) return;
+    if (!image?.id) return;
 
     try {
-      await apiRequest("DELETE", `/api/images/${imageId}`);
+      await apiRequest("DELETE", `/api/images/${image.id}`);
       
       // Invalidate directory images cache to refresh the list
       if (image.directoryId) {
@@ -121,8 +121,12 @@ export default function ImageDetail() {
         description: "Image and associated OCR data removed.",
       });
       
-      // Navigate back to dashboard
-      setLocation("/");
+      // Navigate back to directory
+      if (projectSlug && dirSlug) {
+        setLocation(`/p/${projectSlug}/${dirSlug}`);
+      } else {
+        setLocation("/");
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -252,7 +256,7 @@ export default function ImageDetail() {
             <ImageViewer
               textRegions={textRegions}
               onRegionHover={setHoveredRegion}
-              imageUrl={`/api/images/${imageId}/file`}
+              imageUrl={`/api/images/${image.id}/file`}
             />
           </div>
 

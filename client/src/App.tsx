@@ -20,9 +20,9 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/projects" component={Projects} />
-      <Route path="/project/:id/dir/:dirId" component={ProjectDetail} />
-      <Route path="/project/:id" component={ProjectDetail} />
-      <Route path="/image/:id" component={ImageDetail} />
+      <Route path="/p/:projectSlug/:dirSlug/img/:imageSlug" component={ImageDetail} />
+      <Route path="/p/:projectSlug/:dirSlug" component={ProjectDetail} />
+      <Route path="/p/:projectSlug" component={ProjectDetail} />
       <Route path="/search" component={Search} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />

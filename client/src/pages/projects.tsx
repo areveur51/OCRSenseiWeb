@@ -192,7 +192,7 @@ export default function Projects() {
                 key={project.id} 
                 className="p-6 cursor-pointer hover-elevate active-elevate-2" 
                 data-testid={`card-project-${project.id}`}
-                onClick={() => setLocation(`/project/${project.id}`)}
+                onClick={() => setLocation(`/p/${project.slug}`)}
               >
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div className="flex items-start gap-3 flex-1 min-w-0">

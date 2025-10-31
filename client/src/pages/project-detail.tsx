@@ -50,8 +50,8 @@ interface ImageWithOcr extends Image {
 
 export default function ProjectDetail() {
   const params = useParams();
-  const projectId = params.id ? parseInt(params.id) : null;
-  const dirId = params.dirId ? parseInt(params.dirId) : null;
+  const projectSlug = params.projectSlug;
+  const dirSlug = params.dirSlug;
   
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -65,18 +65,18 @@ export default function ProjectDetail() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: project } = useQuery<ProjectWithStats>({
-    queryKey: [`/api/projects/${projectId}`],
-    enabled: !!projectId,
+    queryKey: [`/api/p/${projectSlug}`],
+    enabled: !!projectSlug,
   });
 
   const { data: directories } = useQuery<Directory[]>({
-    queryKey: [`/api/projects/${projectId}/directories`],
-    enabled: !!projectId,
+    queryKey: [`/api/p/${projectSlug}/directories`],
+    enabled: !!projectSlug,
   });
 
-  // Find current directory by ID, or use root directory (parentId is null)
-  const currentDirectory = dirId 
-    ? directories?.find(d => d.id === dirId)
+  // Find current directory by slug, or use root directory (parentId is null)
+  const currentDirectory = dirSlug 
+    ? directories?.find(d => d.slug === dirSlug)
     : directories?.find(d => d.parentId === null);
   
   // Helper function to build directory path hierarchy for breadcrumbs
@@ -103,7 +103,7 @@ export default function ProjectDetail() {
   const handleFileUpload = async (files: FileList | File[]) => {
     // If no directory exists, create a default one first
     if (!currentDirectory) {
-      if (!projectId) {
+      if (!project?.id) {
         toast({
           variant: "destructive",
           title: "Upload Failed",
@@ -115,7 +115,7 @@ export default function ProjectDetail() {
       try {
         // Create a default "root" directory
         const response = await apiRequest("POST", "/api/directories", {
-          projectId,
+          projectId: project.id,
           name: "root",
           path: "/root",
           parentId: null,
@@ -123,7 +123,7 @@ export default function ProjectDetail() {
         const newDir = await response.json() as Directory;
 
         // Invalidate directories to refresh the list
-        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/directories`] });
+        await queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}/directories`] });
 
         // Wait a moment for the query to refresh
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -195,7 +195,7 @@ export default function ProjectDetail() {
   };
 
   const handleCreateDirectory = async () => {
-    if (!projectId || !newDirName.trim()) return;
+    if (!project?.id || !newDirName.trim()) return;
 
     try {
       // Build the path based on current directory
@@ -203,13 +203,13 @@ export default function ProjectDetail() {
       const newPath = `${parentPath}/${newDirName.trim()}`;
       
       await apiRequest("POST", "/api/directories", {
-        projectId,
+        projectId: project.id,
         name: newDirName.trim(),
         path: newPath,
         parentId: currentDirectory ? currentDirectory.id : null,
       });
 
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/directories`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}/directories`] });
       
       toast({
         title: "Directory Created",
@@ -278,7 +278,7 @@ export default function ProjectDetail() {
       });
       await response.json();
 
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/directories`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}/directories`] });
       
       toast({
         title: "Directory Renamed",
@@ -297,7 +297,7 @@ export default function ProjectDetail() {
   };
 
   const handleDeleteDirectory = async () => {
-    if (!currentDirectory) return;
+    if (!currentDirectory || !directories) return;
     // Don't allow deleting root directories (those with no parent)
     if (!currentDirectory.parentId) {
       toast({
@@ -311,7 +311,7 @@ export default function ProjectDetail() {
     try {
       await apiRequest("DELETE", `/api/directories/${currentDirectory.id}`);
 
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/directories`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}/directories`] });
       
       toast({
         title: "Directory Deleted",
@@ -320,7 +320,10 @@ export default function ProjectDetail() {
       
       setDeleteDirDialogOpen(false);
       // Navigate to parent directory
-      setLocation(`/project/${projectId}/dir/${currentDirectory.parentId}`);
+      const parentDir = directories.find(d => d.id === currentDirectory.parentId);
+      if (parentDir && projectSlug) {
+        setLocation(`/p/${projectSlug}/${parentDir.slug}`)
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -433,10 +436,10 @@ export default function ProjectDetail() {
       <BreadcrumbNav
         items={[
           { label: "Dashboard", href: "/" },
-          { label: project?.name || "Project", href: `/project/${projectId}` },
+          { label: project?.name || "Project", href: `/p/${project?.slug}` },
           ...directoryPath.map((dir, index) => ({
             label: dir.name,
-            href: index < directoryPath.length - 1 ? `/project/${projectId}/dir/${dir.id}` : undefined
+            href: index < directoryPath.length - 1 ? `/p/${project?.slug}/${dir.slug}` : undefined
           })),
         ]}
         onNavigate={(href) => setLocation(href)}
@@ -605,7 +608,7 @@ export default function ProjectDetail() {
                 status={status}
                 confidence={confidence}
                 thumbnailUrl={`/api/images/${image.id}/file`}
-                onClick={() => setLocation(`/image/${image.id}`)}
+                onClick={() => setLocation(`/p/${project?.slug}/${currentDirectory?.slug}/img/${image.slug}`)}
               />
             );
           })}

@@ -125,7 +125,7 @@ export function AppSidebar() {
                     </SidebarMenuItem>
 
                     {expandedProjects.has(project.id) && (
-                      <ProjectDirectories projectId={project.id} />
+                      <ProjectDirectories projectId={project.id} projectSlug={project.slug} />
                     )}
                   </div>
                 ))
@@ -168,11 +168,11 @@ export function AppSidebar() {
   );
 }
 
-function ProjectDirectories({ projectId }: { projectId: number }) {
+function ProjectDirectories({ projectId, projectSlug }: { projectId: number; projectSlug: string }) {
   const [, setLocation] = useLocation();
 
   const { data: directories } = useQuery<Directory[]>({
-    queryKey: [`/api/projects/${projectId}/directories`],
+    queryKey: [`/api/p/${projectSlug}/directories`],
   });
 
   // ASCII art variations for subdirectories
@@ -214,7 +214,7 @@ function ProjectDirectories({ projectId }: { projectId: number }) {
       <div key={dir.id}>
         <SidebarMenuItem>
           <SidebarMenuButton
-            onClick={() => setLocation(`/project/${projectId}/dir/${dir.id}`)}
+            onClick={() => setLocation(`/p/${projectSlug}/${dir.slug}`)}
             className="hover-elevate active-elevate-2 text-xs"
             data-testid={`nav-directory-${dir.id}`}
             style={{ paddingLeft: `${indent + 32}px` }}

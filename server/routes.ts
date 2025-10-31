@@ -579,6 +579,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Slug-based routes for shareable URLs
+  // Project by slug
+  app.get("/api/p/:projectSlug", async (req, res) => {
+    try {
+      const slug = req.params.projectSlug;
+      const project = await storage.getProjectBySlug(slug);
+      
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      const stats = await storage.getProjectStats(project.id);
+      res.json({ ...project, ...stats });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Directories by project slug
+  app.get("/api/p/:projectSlug/directories", async (req, res) => {
+    try {
+      const slug = req.params.projectSlug;
+      const project = await storage.getProjectBySlug(slug);
+      
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      const directories = await storage.getDirectoriesByProject(project.id);
+      res.json(directories);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Directory by slug (within project)
+  app.get("/api/p/:projectSlug/:dirSlug", async (req, res) => {
+    try {
+      const { projectSlug, dirSlug } = req.params;
+      const project = await storage.getProjectBySlug(projectSlug);
+      
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      const directory = await storage.getDirectoryBySlug(project.id, dirSlug);
+      
+      if (!directory) {
+        return res.status(404).json({ error: "Directory not found" });
+      }
+      
+      res.json(directory);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Images by directory slug
+  app.get("/api/p/:projectSlug/:dirSlug/images", async (req, res) => {
+    try {
+      const { projectSlug, dirSlug } = req.params;
+      const project = await storage.getProjectBySlug(projectSlug);
+      
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      const directory = await storage.getDirectoryBySlug(project.id, dirSlug);
+      
+      if (!directory) {
+        return res.status(404).json({ error: "Directory not found" });
+      }
+      
+      const images = await storage.getImagesByDirectory(directory.id);
+      res.json(images);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Image by slug (within directory)
+  app.get("/api/p/:projectSlug/:dirSlug/img/:imageSlug", async (req, res) => {
+    try {
+      const { projectSlug, dirSlug, imageSlug } = req.params;
+      const project = await storage.getProjectBySlug(projectSlug);
+      
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      const directory = await storage.getDirectoryBySlug(project.id, dirSlug);
+      
+      if (!directory) {
+        return res.status(404).json({ error: "Directory not found" });
+      }
+      
+      const image = await storage.getImageBySlug(directory.id, imageSlug);
+      
+      if (!image) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      
+      res.json(image);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Start OCR processing queue
