@@ -58,12 +58,14 @@ export default function ImageDetail() {
     setIsReprocessing(true);
     try {
       await apiRequest("POST", `/api/images/${image.id}/process`);
-      queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}/${dirSlug}/img/${imageSlug}`] });
       
       toast({
         title: "Reprocessing Started",
         description: "Image queued for OCR processing.",
       });
+      
+      // Small delay to ensure user sees the "Queueing..." state
+      await new Promise(resolve => setTimeout(resolve, 500));
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -72,6 +74,8 @@ export default function ImageDetail() {
       });
     } finally {
       setIsReprocessing(false);
+      // Invalidate after state is reset to prevent premature re-render
+      queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}/${dirSlug}/img/${imageSlug}`] });
     }
   };
 

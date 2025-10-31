@@ -12,6 +12,12 @@ OCRSenseiWeb is a Matrix-themed OCR application that extracts text from scanned 
 Preferred communication style: Simple, everyday language.
 
 ## Recent Updates (October 31, 2025)
+- ✅ **Image Reprocessing**: Added ability to reprocess already-processed images
+  - Reprocess button available on all image detail pages for both processed and unprocessed images
+  - Visual feedback with "Queueing..." state and disabled button during API request
+  - Prevents duplicate submissions through state management
+  - Useful when OCR settings are changed or initial results need improvement
+  - Button adapts styling: default variant for "Process Now", outline variant for "Reprocess"
 - ✅ **OCR Engine Enhancements**: Implemented configurable OCR preprocessing pipeline
   - Added OpenCV-based image preprocessing with grayscale conversion, upscaling (1.5x), denoising, Otsu binarization, and auto-deskewing
   - Configurable OCR engine mode (OEM 0-3): Legacy, LSTM, Legacy+LSTM, Auto-select
