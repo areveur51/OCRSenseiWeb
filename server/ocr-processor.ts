@@ -127,6 +127,11 @@ export class OcrProcessor {
           }
         }
 
+        // Log Python stderr for debugging (includes resize info, warnings)
+        if (errorData) {
+          console.log("Python stderr:", errorData);
+        }
+
         if (code !== 0) {
           console.error("OCR Python process failed:");
           console.error("Exit code:", code);
@@ -140,9 +145,18 @@ export class OcrProcessor {
 
         try {
           const result: OcrResult = JSON.parse(outputData);
+          console.log("OCR result summary:", {
+            success: result.success,
+            hasConsensusText: !!result.consensus_text,
+            textLength: result.consensus_text?.length || 0,
+            bboxCount: result.bounding_boxes?.length || 0,
+            confidence: result.pytesseract_confidence,
+            error: result.error
+          });
           resolve(result);
         } catch (error) {
-          reject(new Error(`Failed to parse OCR output: ${outputData}`));
+          console.error("Failed to parse OCR JSON. Raw stdout:", outputData.substring(0, 500));
+          reject(new Error(`Failed to parse OCR output: ${outputData.substring(0, 200)}`));
         }
       });
 

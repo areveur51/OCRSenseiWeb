@@ -511,6 +511,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/images/:id/text", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const ocrResult = await storage.getOcrResultByImage(id);
+      
+      if (!ocrResult) {
+        return res.status(404).json({ error: "OCR result not found" });
+      }
+      
+      res.json({ 
+        text: ocrResult.consensusText,
+        confidence: ocrResult.pytesseractConfidence,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/images/:id/results", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const ocrResult = await storage.getOcrResultByImage(id);
+      
+      if (!ocrResult) {
+        return res.status(404).json({ error: "OCR result not found" });
+      }
+      
+      res.json(ocrResult);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.patch("/api/images/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
