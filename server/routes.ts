@@ -81,9 +81,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
       
       const project = await storage.createProject({
-        ...validated,
+        name: validated.name,
+        description: validated.description,
         slug: uniqueSlug,
-      });
+      } as any);
       res.status(201).json(project);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -156,9 +157,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
       
       const directory = await storage.createDirectory({
-        ...validated,
+        projectId: validated.projectId,
+        name: validated.name,
+        path: validated.path,
+        parentId: validated.parentId,
         slug: uniqueSlug,
-      });
+      } as any);
       res.status(201).json(directory);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -379,7 +383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sourceType: "upload",
           sourceUrl: null,
           imageData: file.buffer,
-        });
+        } as any);
         
         await storage.createQueueItem({
           imageId: image.id,
@@ -446,7 +450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sourceType: "url",
         sourceUrl: url,
         imageData: fileResult.buffer,
-      });
+      } as any);
       
       await storage.createQueueItem({
         imageId: image.id,
