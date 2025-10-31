@@ -681,7 +681,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Image not found" });
       }
       
-      res.json(image);
+      const ocrResult = await storage.getOcrResultByImage(image.id);
+      const queueItem = await storage.getQueueItemByImage(image.id);
+      
+      res.json({
+        ...image,
+        ocrResult,
+        processingStatus: queueItem?.status || "not_queued",
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
