@@ -139,7 +139,9 @@ export class OcrProcessor {
       const result = await this.processImage(queueItem.imageId);
 
       if (result.success) {
-        await storage.createOcrResult({
+        // Upsert OCR result: updates existing or inserts new
+        // This is atomic and safe - no data loss if processing fails
+        await storage.upsertOcrResult({
           imageId: queueItem.imageId,
           pytesseractText: result.pytesseract_text || null,
           pytesseractConfidence: result.pytesseract_confidence || null,

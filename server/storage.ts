@@ -56,6 +56,8 @@ export interface IStorage {
   // OCR Results
   getOcrResultByImage(imageId: number): Promise<OcrResult | undefined>;
   createOcrResult(result: InsertOcrResult): Promise<OcrResult>;
+  deleteOcrResultsByImage(imageId: number): Promise<boolean>;
+  upsertOcrResult(result: InsertOcrResult): Promise<OcrResult>;
 
   // Processing Queue
   getQueuedItems(): Promise<ProcessingQueue[]>;
@@ -403,13 +405,50 @@ export class DbStorage implements IStorage {
 
   // OCR Results
   async getOcrResultByImage(imageId: number): Promise<OcrResult | undefined> {
-    const [result] = await db.select().from(ocrResults).where(eq(ocrResults.imageId, imageId));
+    const [result] = await db
+      .select()
+      .from(ocrResults)
+      .where(eq(ocrResults.imageId, imageId))
+      .orderBy(desc(ocrResults.processedAt))
+      .limit(1);
     return result;
   }
 
   async createOcrResult(result: InsertOcrResult): Promise<OcrResult> {
     const [newResult] = await db.insert(ocrResults).values(result).returning();
     return newResult;
+  }
+
+  async deleteOcrResultsByImage(imageId: number): Promise<boolean> {
+    const result = await db.delete(ocrResults).where(eq(ocrResults.imageId, imageId));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async upsertOcrResult(result: InsertOcrResult): Promise<OcrResult> {
+    // Check if an OCR result already exists for this image
+    const existing = await this.getOcrResultByImage(result.imageId);
+    
+    if (existing) {
+      // Update the existing result
+      const [updated] = await db
+        .update(ocrResults)
+        .set({
+          pytesseractText: result.pytesseractText,
+          pytesseractConfidence: result.pytesseractConfidence,
+          easyocrText: result.easyocrText,
+          easyocrConfidence: result.easyocrConfidence,
+          consensusText: result.consensusText,
+          consensusSource: result.consensusSource,
+          boundingBoxes: result.boundingBoxes,
+          processedAt: new Date(),
+        })
+        .where(eq(ocrResults.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      // Insert a new result
+      return this.createOcrResult(result);
+    }
   }
 
   // Processing Queue
