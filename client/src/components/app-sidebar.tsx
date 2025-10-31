@@ -10,10 +10,12 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home, FolderOpen, Search, Settings, ChevronRight } from "lucide-react";
+import { Home, FolderOpen, Search, Settings, ChevronRight, GripVertical, Edit3, Save } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { Project, Directory } from "@shared/schema";
 
 interface ProjectWithDirectories extends Project {
@@ -170,6 +172,9 @@ export function AppSidebar() {
 
 function ProjectDirectories({ projectId, projectSlug }: { projectId: number; projectSlug: string }) {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [editMode, setEditMode] = useState(false);
+  const [draggedDir, setDraggedDir] = useState<number | null>(null);
 
   const { data: directories } = useQuery<Directory[]>({
     queryKey: [`/api/p/${projectSlug}/directories`],
@@ -207,25 +212,98 @@ function ProjectDirectories({ projectId, projectSlug }: { projectId: number; pro
         children: buildTree(dir.id, level + 1)
       }));
   };
+
+  const handleDragStart = (e: React.DragEvent, dirId: number) => {
+    setDraggedDir(dirId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetDirId: number) => {
+    e.preventDefault();
+    if (!draggedDir || draggedDir === targetDirId || !directories) return;
+
+    const draggedDirectory = directories.find(d => d.id === draggedDir);
+    const targetDirectory = directories.find(d => d.id === targetDirId);
+
+    if (!draggedDirectory || !targetDirectory) return;
+
+    // Only allow reordering within the same parent
+    if (draggedDirectory.parentId !== targetDirectory.parentId) {
+      toast({
+        variant: "destructive",
+        title: "Cannot Reorder",
+        description: "Can only reorder directories at the same level",
+      });
+      setDraggedDir(null);
+      return;
+    }
+
+    // Swap sortOrder values
+    const draggedOrder = draggedDirectory.sortOrder ?? 0;
+    const targetOrder = targetDirectory.sortOrder ?? 0;
+
+    try {
+      await Promise.all([
+        apiRequest("POST", `/api/directories/${draggedDir}/reorder`, {
+          sortOrder: targetOrder,
+        }),
+        apiRequest("POST", `/api/directories/${targetDirId}/reorder`, {
+          sortOrder: draggedOrder,
+        }),
+      ]);
+
+      // Invalidate queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}/directories`] });
+
+      toast({
+        title: "Directories Reordered",
+        description: "Directory order updated successfully",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Reorder Failed",
+        description: error.message || "Failed to reorder directories",
+      });
+    }
+
+    setDraggedDir(null);
+  };
   
   const renderDirectory = (dir: DirectoryNode, level: number, index: number): JSX.Element => {
     const indent = level * 16; // 16px per level
+    const isDragging = draggedDir === dir.id;
+
     return (
       <div key={dir.id}>
         <SidebarMenuItem>
-          <SidebarMenuButton
-            onClick={() => setLocation(`/p/${projectSlug}/${dir.slug}`)}
-            className="hover-elevate active-elevate-2 text-xs"
-            data-testid={`nav-directory-${dir.id}`}
-            style={{ paddingLeft: `${indent + 32}px` }}
+          <div
+            draggable={editMode}
+            onDragStart={(e) => handleDragStart(e, dir.id)}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, dir.id)}
+            className={`${isDragging ? 'opacity-50' : ''} ${editMode ? 'cursor-move' : ''}`}
           >
-            <div className="flex items-center gap-2 flex-1">
-              <pre className="ascii-art text-[0.5rem] leading-tight opacity-80 flex-shrink-0">
+            <SidebarMenuButton
+              onClick={() => !editMode && setLocation(`/p/${projectSlug}/${dir.slug}`)}
+              className="hover-elevate active-elevate-2 text-xs"
+              data-testid={`nav-directory-${dir.id}`}
+              style={{ paddingLeft: `${indent + 32}px` }}
+            >
+              <div className="flex items-center gap-2 flex-1">
+                {editMode && <GripVertical className="h-3 w-3 text-muted-foreground" />}
+                <pre className="ascii-art text-[0.5rem] leading-tight opacity-80 flex-shrink-0">
 {directoryAsciiArt[index % directoryAsciiArt.length]}
-              </pre>
-              <span className="truncate">{dir.name}/</span>
-            </div>
-          </SidebarMenuButton>
+                </pre>
+                <span className="truncate">{dir.name}/</span>
+              </div>
+            </SidebarMenuButton>
+          </div>
         </SidebarMenuItem>
         {dir.children.map((child, childIndex) => renderDirectory(child, level + 1, childIndex))}
       </div>
@@ -236,6 +314,25 @@ function ProjectDirectories({ projectId, projectSlug }: { projectId: number; pro
   
   return (
     <div className="pl-8">
+      <div className="px-3 py-2 flex items-center justify-between">
+        <button
+          onClick={() => setEditMode(!editMode)}
+          className="text-xs text-primary hover:underline flex items-center gap-1"
+          data-testid="button-edit-directories"
+        >
+          {editMode ? (
+            <>
+              <Save className="h-3 w-3" />
+              Done
+            </>
+          ) : (
+            <>
+              <Edit3 className="h-3 w-3" />
+              Edit
+            </>
+          )}
+        </button>
+      </div>
       {rootDirectories.map((dir, index) => renderDirectory(dir, 0, index))}
     </div>
   );

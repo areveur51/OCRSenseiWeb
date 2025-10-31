@@ -1,11 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { Button } from "@/components/ui/button";
 import { ImageCard } from "@/components/image-card";
 import { UploadZone } from "@/components/upload-zone";
-import { Upload, Play, Plus, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { Upload, Play, Plus, MoreVertical, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -73,6 +73,8 @@ export default function ProjectDetail() {
   const [newDirParentId, setNewDirParentId] = useState<number | null>(null);
   const [renameDirValue, setRenameDirValue] = useState("");
   const [renameProjectValue, setRenameProjectValue] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: project } = useQuery<ProjectWithStats>({
@@ -106,10 +108,36 @@ export default function ProjectDetail() {
   
   const directoryPath = getDirectoryPath(currentDirectory);
 
-  const { data: images, isLoading: imagesLoading } = useQuery<ImageWithOcr[]>({
-    queryKey: [`/api/directories/${currentDirectory?.id}/images`],
+  // Reset pagination when directory changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [currentDirectory?.id]);
+
+  interface PaginatedImagesResponse {
+    images: ImageWithOcr[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }
+
+  const { data: imagesData, isLoading: imagesLoading } = useQuery<PaginatedImagesResponse>({
+    queryKey: [`/api/directories/${currentDirectory?.id}/images`, currentPage, pageSize],
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/directories/${currentDirectory?.id}/images?page=${currentPage}&limit=${pageSize}`,
+        { credentials: 'include' }
+      );
+      if (!response.ok) throw new Error('Failed to fetch images');
+      return response.json();
+    },
     enabled: !!currentDirectory?.id,
   });
+
+  const images = imagesData?.images;
+  const pagination = imagesData?.pagination;
 
   const handleFileUpload = async (files: FileList | File[]) => {
     // If no directory exists, create a default one first
@@ -259,7 +287,7 @@ export default function ProjectDetail() {
   };
 
   const handleProcessPending = async () => {
-    if (!images) return;
+    if (!images || !Array.isArray(images)) return;
 
     const pendingImages = images.filter(img => img.processingStatus === "not_queued");
     
@@ -739,27 +767,75 @@ export default function ProjectDetail() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {images.map((image) => {
-            let status: "completed" | "processing" | "pending" | "error" = "pending";
-            if (image.processingStatus === "completed") status = "completed";
-            else if (image.processingStatus === "processing") status = "processing";
-            else if (image.processingStatus === "failed") status = "error";
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {images.map((image) => {
+              let status: "completed" | "processing" | "pending" | "error" = "pending";
+              if (image.processingStatus === "completed") status = "completed";
+              else if (image.processingStatus === "processing") status = "processing";
+              else if (image.processingStatus === "failed") status = "error";
 
-            const confidence = image.ocrResult?.pytesseractConfidence || image.ocrResult?.easyocrConfidence;
+              const confidence = image.ocrResult?.pytesseractConfidence || image.ocrResult?.easyocrConfidence;
 
-            return (
-              <ImageCard
-                key={image.id}
-                filename={image.originalFilename}
-                status={status}
-                confidence={confidence}
-                thumbnailUrl={`/api/images/${image.id}/file`}
-                onClick={() => setLocation(`/p/${project?.slug}/${currentDirectory?.slug}/img/${image.slug}`)}
-              />
-            );
-          })}
-        </div>
+              return (
+                <ImageCard
+                  key={image.id}
+                  filename={image.originalFilename}
+                  status={status}
+                  confidence={confidence}
+                  thumbnailUrl={`/api/images/${image.id}/file`}
+                  onClick={() => setLocation(`/p/${project?.slug}/${currentDirectory?.slug}/img/${image.slug}`)}
+                />
+              );
+            })}
+          </div>
+
+          {pagination && pagination.total > 0 && (
+            <div className="mt-8 flex items-center justify-between border-t pt-6">
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-muted-foreground">
+                  Showing {((pagination.page - 1) * pagination.limit) + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} images
+                </span>
+                <Select value={pageSize.toString()} onValueChange={(value) => { setPageSize(parseInt(value)); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-32" data-testid="select-page-size">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="25">25 per page</SelectItem>
+                    <SelectItem value="50">50 per page</SelectItem>
+                    <SelectItem value="100">100 per page</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+                  disabled={currentPage === 1}
+                  data-testid="button-prev-page"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground px-4">
+                  Page {pagination.page} of {pagination.totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(page => Math.min(pagination.totalPages, page + 1))}
+                  disabled={currentPage === pagination.totalPages}
+                  data-testid="button-next-page"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <Dialog open={renameDirDialogOpen} onOpenChange={setRenameDirDialogOpen}>

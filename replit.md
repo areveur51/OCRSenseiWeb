@@ -12,6 +12,20 @@ OCRSenseiWeb is a Matrix-themed OCR application that extracts text from scanned 
 Preferred communication style: Simple, everyday language.
 
 ## Recent Updates (October 31, 2025)
+- ✅ **Directory Drag & Drop Reordering**: Added ability to reorder directories in sidebar
+  - Edit mode toggle (Edit/Done button) in sidebar for each project's directory list
+  - Drag handle icon (GripVertical) appears when in edit mode
+  - Visual feedback during drag (opacity change, cursor style)
+  - Only allows reordering directories at the same level (same parent)
+  - Swaps sortOrder values between dragged and target directories
+  - Toast notifications for success/error feedback
+  - Added sortOrder field to directories schema
+- ✅ **Image Pagination**: Added pagination controls for image listings
+  - Page size selector with options for 25, 50, or 100 images per page (default: 25)
+  - Previous/Next navigation buttons with proper disabled states
+  - Shows "Showing X-Y of Z images" with current page and total pages
+  - Automatically resets to page 1 when switching directories or changing page size
+  - Backend returns paginated response with total count and page information
 - ✅ **Image Reprocessing**: Added ability to reprocess already-processed images
   - Reprocess button available on all image detail pages for both processed and unprocessed images
   - Visual feedback with "Queueing..." state and disabled button during API request
