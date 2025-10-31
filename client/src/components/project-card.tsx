@@ -1,8 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FolderOpen, FileText, CheckCircle2, Clock } from "lucide-react";
+import { getProjectAsciiArt } from "@/lib/ascii-art";
 
 interface ProjectCardProps {
+  projectId: number;
   name: string;
   totalImages: number;
   processedImages: number;
@@ -12,6 +14,7 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({
+  projectId,
   name,
   totalImages,
   processedImages,
@@ -30,10 +33,7 @@ export function ProjectCard({
       <div className="flex items-start justify-between gap-4 mb-4">
         <div className="flex items-start gap-3">
           <pre className="ascii-art text-base opacity-90">
-{`╔═══╗
-║▓▓▓║
-║▓▓▓║
-╚═══╝`}
+{getProjectAsciiArt(projectId)}
           </pre>
           <div className="flex-1">
             <h3 className="font-semibold text-base" data-testid={`text-project-name-${name.toLowerCase().replace(/\s+/g, '-')}`}>

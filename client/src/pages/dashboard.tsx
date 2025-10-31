@@ -170,6 +170,7 @@ export default function Dashboard() {
               return (
                 <ProjectCard
                   key={project.id}
+                  projectId={project.id}
                   name={project.name}
                   totalImages={project.totalImages}
                   processedImages={project.processedImages}

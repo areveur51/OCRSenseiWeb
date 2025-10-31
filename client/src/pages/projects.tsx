@@ -27,6 +27,7 @@ import { Pencil, Trash2, Plus, AlertTriangle } from "lucide-react";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { getProjectAsciiArt } from "@/lib/ascii-art";
 import type { Project } from "@shared/schema";
 
 interface ProjectWithStats extends Project {
@@ -47,36 +48,6 @@ export default function Projects() {
   const { data: projects, isLoading } = useQuery<ProjectWithStats[]>({
     queryKey: ["/api/projects"],
   });
-
-  // 23 unique metric style ASCII art variations for projects
-  const getProjectAsciiArt = (projectId: number) => {
-    const variations = [
-      `╔═══╗\n║▓▓▓║\n║▓▓▓║\n╚═══╝`, // 0
-      `╔═══╗\n║███║\n║███║\n╚═══╝`, // 1
-      `╔═══╗\n║▒▒▒║\n║▒▒▒║\n╚═══╝`, // 2
-      `╔═══╗\n║░░░║\n║░░░║\n╚═══╝`, // 3
-      `╔═══╗\n║▓█▓║\n║▓█▓║\n╚═══╝`, // 4
-      `╔═══╗\n║█▓█║\n║█▓█║\n╚═══╝`, // 5
-      `╔═══╗\n║▒░▒║\n║▒░▒║\n╚═══╝`, // 6
-      `╔═══╗\n║░▒░║\n║░▒░║\n╚═══╝`, // 7
-      `╔═══╗\n║▓▓█║\n║█▓▓║\n╚═══╝`, // 8
-      `╔═══╗\n║███║\n║▓▓▓║\n╚═══╝`, // 9
-      `╔═══╗\n║▒▒▒║\n║███║\n╚═══╝`, // 10
-      `╔═══╗\n║░░░║\n║▒▒▒║\n╚═══╝`, // 11
-      `╔═══╗\n║▓█░║\n║░█▓║\n╚═══╝`, // 12
-      `╔═══╗\n║█▒▓║\n║▓▒█║\n╚═══╝`, // 13
-      `╔═══╗\n║▓░█║\n║█░▓║\n╚═══╝`, // 14
-      `╔═══╗\n║░▓░║\n║░▓░║\n╚═══╝`, // 15
-      `╔═══╗\n║█░█║\n║█░█║\n╚═══╝`, // 16
-      `╔═══╗\n║▓▒▓║\n║▓▒▓║\n╚═══╝`, // 17
-      `╔═══╗\n║░█░║\n║░█░║\n╚═══╝`, // 18
-      `╔═══╗\n║▒▓▒║\n║▒▓▒║\n╚═══╝`, // 19
-      `╔═══╗\n║███║\n║▒▒▒║\n╚═══╝`, // 20
-      `╔═══╗\n║▓▓▓║\n║░░░║\n╚═══╝`, // 21
-      `╔═══╗\n║█▓░║\n║░▓█║\n╚═══╝`, // 22
-    ];
-    return variations[projectId % 23];
-  };
 
   const handleEditClick = (project: ProjectWithStats) => {
     setSelectedProject(project);
