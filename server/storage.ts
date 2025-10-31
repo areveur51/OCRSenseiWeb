@@ -105,17 +105,18 @@ export class DbStorage implements IStorage {
   async updateProject(id: number, updates: Partial<InsertProject>): Promise<Project | undefined> {
     // If name is being updated, regenerate slug
     if (updates.name) {
-      const slug = await generateUniqueSlug(
-        updates.name,
-        async (slug) => {
-          const [existing] = await db
-            .select()
-            .from(projects)
-            .where(and(eq(projects.slug, slug), not(eq(projects.id, id))));
-          return existing;
-        }
-      );
-      updates.slug = slug;
+      const { generateSlug } = await import("@shared/slugs");
+      const baseSlug = generateSlug(updates.name);
+      
+      // Get existing project slugs (excluding current project)
+      const allProjects = await db
+        .select()
+        .from(projects)
+        .where(not(eq(projects.id, id)));
+      const existingSlugs = allProjects.map(p => p.slug);
+      
+      const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
+      updates.slug = uniqueSlug;
     }
     
     const [updated] = await db
