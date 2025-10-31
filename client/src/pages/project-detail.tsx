@@ -806,7 +806,12 @@ export default function ProjectDetail() {
               else if (image.processingStatus === "processing") status = "processing";
               else if (image.processingStatus === "failed") status = "error";
 
-              const confidence = image.ocrResult?.pytesseractConfidence || image.ocrResult?.easyocrConfidence;
+              // Use the highest confidence between Tesseract and EasyOCR
+              const tesseractConf = image.ocrResult?.pytesseractConfidence ?? 0;
+              const easyocrConf = image.ocrResult?.easyocrConfidence ?? 0;
+              const confidence = (tesseractConf > 0 || easyocrConf > 0) 
+                ? Math.max(tesseractConf, easyocrConf) 
+                : undefined;
 
               return (
                 <ImageCard

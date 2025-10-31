@@ -267,7 +267,10 @@ export default function Search() {
 
             <div className="space-y-4">
               {results.map((result) => {
-                const confidence = result.ocrResult.pytesseractConfidence || result.ocrResult.easyocrConfidence || 0;
+                // Use the highest confidence between Tesseract and EasyOCR
+                const tesseractConf = result.ocrResult.pytesseractConfidence ?? 0;
+                const easyocrConf = result.ocrResult.easyocrConfidence ?? 0;
+                const confidence = Math.max(tesseractConf, easyocrConf);
                 const matchedText = result.ocrResult.consensusText || "";
                 
                 // Find the best match position for highlighting
