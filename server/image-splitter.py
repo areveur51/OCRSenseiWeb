@@ -10,6 +10,7 @@ import os
 from PIL import Image
 import base64
 import io
+import math
 
 def split_image(image_path, config):
     """
@@ -58,61 +59,127 @@ def split_image(image_path, config):
                 'tile_count': 0
             }
         
-        # Determine split direction (vertical or horizontal)
-        split_vertically = height > width
+        # Determine split strategy: 2D grid if both dimensions exceed, else 1D strip
+        exceeds_width = width > max_width
+        exceeds_height = height > max_height
         
-        if split_vertically:
-            # Split into horizontal strips (tall image)
+        if exceeds_width and exceeds_height:
+            # Both dimensions exceed - use 2D grid splitting
+            tile_width = max_width
+            tile_height = max_height
+            x_step = tile_width - overlap
+            y_step = tile_height - overlap
+            
+            # Calculate number of tiles in each direction
+            # Formula: 1 + ceil(max(0, dimension - tile_size) / step)
+            num_cols = 1 + math.ceil(max(0, width - tile_width) / x_step)
+            num_rows = 1 + math.ceil(max(0, height - tile_height) / y_step)
+            
+            tiles = []
+            tile_index = 1
+            
+            for row in range(num_rows):
+                y_offset = row * y_step
+                # Tile height shrinks for last row if needed
+                current_tile_height = min(tile_height, height - y_offset)
+                
+                for col in range(num_cols):
+                    x_offset = col * x_step
+                    # Tile width shrinks for last column if needed
+                    current_tile_width = min(tile_width, width - x_offset)
+                    
+                    box = (
+                        x_offset,
+                        y_offset,
+                        x_offset + current_tile_width,
+                        y_offset + current_tile_height
+                    )
+                    
+                    # Crop tile
+                    tile = img.crop(box)
+                    
+                    # Convert to base64 PNG
+                    buffer = io.BytesIO()
+                    tile.save(buffer, format='PNG')
+                    tile_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                    
+                    tiles.append({
+                        'index': tile_index,
+                        'data': tile_data,
+                        'format': 'png',
+                        'dimensions': [tile.width, tile.height],
+                        'box': list(box),
+                        'grid_position': [row, col]
+                    })
+                    tile_index += 1
+            
+            split_mode = 'grid'
+            
+        elif exceeds_height:
+            # Only height exceeds - vertical strips (top to bottom)
             tile_width = width
             tile_height = max_height
-            num_tiles = (height + tile_height - overlap - 1) // (tile_height - overlap)
+            y_step = tile_height - overlap
+            num_tiles = 1 + math.ceil(max(0, height - tile_height) / y_step)
+            
+            tiles = []
+            
+            for i in range(num_tiles):
+                y_offset = i * y_step
+                # Tile height shrinks for last tile if needed
+                current_tile_height = min(tile_height, height - y_offset)
+                box = (0, y_offset, tile_width, y_offset + current_tile_height)
+                
+                # Crop tile
+                tile = img.crop(box)
+                
+                # Convert to base64 PNG
+                buffer = io.BytesIO()
+                tile.save(buffer, format='PNG')
+                tile_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                
+                tiles.append({
+                    'index': i + 1,
+                    'data': tile_data,
+                    'format': 'png',
+                    'dimensions': [tile.width, tile.height],
+                    'box': list(box)
+                })
+            
+            split_mode = 'vertical'
+            
         else:
-            # Split into vertical strips (wide image)
+            # Only width exceeds - horizontal strips (left to right)
             tile_width = max_width
             tile_height = height
-            num_tiles = (width + tile_width - overlap - 1) // (tile_width - overlap)
-        
-        tiles = []
-        
-        for i in range(num_tiles):
-            if split_vertically:
-                # Vertical split (top to bottom)
-                y_offset = i * (tile_height - overlap)
-                # Last tile: adjust to fit remaining height
-                if i == num_tiles - 1:
-                    y_offset = height - tile_height
-                    if y_offset < 0:
-                        y_offset = 0
-                        tile_height = height
+            x_step = tile_width - overlap
+            num_tiles = 1 + math.ceil(max(0, width - tile_width) / x_step)
+            
+            tiles = []
+            
+            for i in range(num_tiles):
+                x_offset = i * x_step
+                # Tile width shrinks for last tile if needed
+                current_tile_width = min(tile_width, width - x_offset)
+                box = (x_offset, 0, x_offset + current_tile_width, tile_height)
                 
-                box = (0, y_offset, tile_width, min(y_offset + tile_height, height))
-            else:
-                # Horizontal split (left to right)
-                x_offset = i * (tile_width - overlap)
-                # Last tile: adjust to fit remaining width
-                if i == num_tiles - 1:
-                    x_offset = width - tile_width
-                    if x_offset < 0:
-                        x_offset = 0
-                        tile_width = width
+                # Crop tile
+                tile = img.crop(box)
                 
-                box = (x_offset, 0, min(x_offset + tile_width, width), tile_height)
+                # Convert to base64 PNG
+                buffer = io.BytesIO()
+                tile.save(buffer, format='PNG')
+                tile_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                
+                tiles.append({
+                    'index': i + 1,
+                    'data': tile_data,
+                    'format': 'png',
+                    'dimensions': [tile.width, tile.height],
+                    'box': list(box)
+                })
             
-            # Crop tile
-            tile = img.crop(box)
-            
-            # Convert to base64 PNG
-            buffer = io.BytesIO()
-            tile.save(buffer, format='PNG')
-            tile_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
-            
-            tiles.append({
-                'index': i + 1,
-                'data': tile_data,
-                'format': 'png',
-                'dimensions': [tile.width, tile.height],
-                'box': list(box)
-            })
+            split_mode = 'horizontal'
         
         return {
             'success': True,
@@ -120,7 +187,7 @@ def split_image(image_path, config):
             'original_dimensions': [width, height],
             'tiles': tiles,
             'tile_count': len(tiles),
-            'split_direction': 'vertical' if split_vertically else 'horizontal'
+            'split_mode': split_mode
         }
         
     except Exception as e:
