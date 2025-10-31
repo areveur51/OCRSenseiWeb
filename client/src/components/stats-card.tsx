@@ -16,13 +16,24 @@ const iconMap: Record<string, string> = {
   "Total Projects": `╔═╗
 ║▓║
 ╚═╝`,
-  "Images Processed": `┌─┐
-│▓│
-└─┘`,
-  "Completed": `[✓]
-▓▓▓`,
-  "Avg. Confidence": `╱▔╲
-▓▓▓`,
+  "Total Images": `╔═╗
+║▓║
+╚═╝`,
+  "Processed": `╔═╗
+║▓║
+╚═╝`,
+  "Progress": `╔═╗
+║▓║
+╚═╝`,
+  "Images Processed": `╔═╗
+║▓║
+╚═╝`,
+  "Completed": `╔═╗
+║▓║
+╚═╝`,
+  "Avg. Confidence": `╔═╗
+║▓║
+╚═╝`,
 };
 
 export function StatsCard({

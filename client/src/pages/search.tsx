@@ -90,11 +90,11 @@ export default function Search() {
     <div className="space-y-6">
       <div className="flex gap-8">
         <pre className="ascii-art text-xl hidden md:block">
-{`╭───────────────╮
-│      ?        │
-│ ───────────── │
-│ ═══════════── │
-╰───────────────╯
+{`╔═══════════════╗
+║      ?        ║
+║ ───────────── ║
+║ ═══════════── ║
+╚═══════════════╝
    [SEARCH]`}
         </pre>
         <div>
@@ -290,9 +290,9 @@ export default function Search() {
                     <div className="flex items-start justify-between gap-4 mb-3">
                       <div className="flex items-start gap-3 flex-1">
                         <pre className="ascii-art text-xs opacity-80">
-{`+-----+
-| IMG |
-+-----+`}
+{`╔═════╗
+║ IMG ║
+╚═════╝`}
                         </pre>
                         <div className="flex-1">
                           <h3 className="font-semibold text-base flex items-center gap-2">
