@@ -176,7 +176,7 @@ export default function Dashboard() {
                   processedImages={project.processedImages}
                   subdirectoryCount={project.totalDirectories}
                   lastUpdated={lastUpdated}
-                  onClick={() => setLocation(`/project/${project.id}/root`)}
+                  onClick={() => setLocation(`/p/${project.slug}`)}
                 />
               );
             })}

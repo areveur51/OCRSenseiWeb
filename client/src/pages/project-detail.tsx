@@ -31,6 +31,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -63,6 +70,7 @@ export default function ProjectDetail() {
   const [deleteProjectDialogOpen, setDeleteProjectDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [newDirName, setNewDirName] = useState("");
+  const [newDirParentId, setNewDirParentId] = useState<number | null>(null);
   const [renameDirValue, setRenameDirValue] = useState("");
   const [renameProjectValue, setRenameProjectValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -201,26 +209,29 @@ export default function ProjectDetail() {
     if (!project?.id || !newDirName.trim()) return;
 
     try {
-      // Build the path based on current directory
-      const parentPath = currentDirectory ? currentDirectory.path : "";
+      // Find the selected parent directory to build the path
+      const parentDir = newDirParentId ? directories?.find(d => d.id === newDirParentId) : null;
+      const parentPath = parentDir ? parentDir.path : "";
       const newPath = `${parentPath}/${newDirName.trim()}`;
       
       await apiRequest("POST", "/api/directories", {
         projectId: project.id,
         name: newDirName.trim(),
         path: newPath,
-        parentId: currentDirectory ? currentDirectory.id : null,
+        parentId: newDirParentId,
       });
 
       queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}/directories`] });
       
+      const parentName = parentDir ? parentDir.name : "root";
       toast({
         title: "Directory Created",
-        description: `Subdirectory "${newDirName.trim()}" has been created${currentDirectory ? ` in "${currentDirectory.name}"` : ""}.`,
+        description: `Directory "${newDirName.trim()}" has been created in "${parentName}".`,
       });
       
       setCreateDirDialogOpen(false);
       setNewDirName("");
+      setNewDirParentId(null);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -582,12 +593,31 @@ export default function ProjectDetail() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create Subdirectory</DialogTitle>
+                <DialogTitle>Create Directory</DialogTitle>
                 <DialogDescription>
-                  Create a new subdirectory{currentDirectory ? ` in "${currentDirectory.name}"` : ""} for organizing images
+                  Create a new directory for organizing images
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="parent-dir">Parent Folder</Label>
+                  <Select 
+                    value={newDirParentId === null ? "root" : String(newDirParentId)} 
+                    onValueChange={(value) => setNewDirParentId(value === "root" ? null : parseInt(value))}
+                  >
+                    <SelectTrigger id="parent-dir" data-testid="select-parent-directory">
+                      <SelectValue placeholder="Select parent folder" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="root" data-testid="option-root">/ (Root Level)</SelectItem>
+                      {directories?.map((dir) => (
+                        <SelectItem key={dir.id} value={String(dir.id)} data-testid={`option-dir-${dir.id}`}>
+                          {dir.path || dir.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="dir-name">Directory Name</Label>
                   <Input
@@ -603,7 +633,7 @@ export default function ProjectDetail() {
                 <Button variant="outline" onClick={() => setCreateDirDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreateDirectory} disabled={!newDirName.trim()}>
+                <Button onClick={handleCreateDirectory} disabled={!newDirName.trim()} data-testid="button-create-directory-confirm">
                   Create
                 </Button>
               </DialogFooter>
