@@ -11,7 +11,12 @@ OCRSenseiWeb is a Matrix-themed OCR application that extracts text from scanned 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
-## Recent Updates (October 2025)
+## Recent Updates (October 31, 2025)
+- ✅ **Multi-Level Subdirectories**: Added support for unlimited nested subdirectory levels within projects
+  - Subdirectories can now contain subdirectories (e.g., Root > Folder1 > Folder2 > Folder3...)
+  - Breadcrumb navigation shows full directory hierarchy
+  - Sidebar displays nested tree structure with proper indentation
+  - URL routing uses directory IDs for reliable navigation
 - ✅ Updated all ASCII art to cohesive metric style (3-4 lines, bold double-line borders)
 - ✅ Created 23 unique project icon variations
 - ✅ Added comprehensive documentation with screenshots
@@ -44,7 +49,7 @@ Images are stored as binary data (bytea) in PostgreSQL within the `imageData` co
   - 3 characters: 0.2 threshold (loose matching)
 - **Performance:** Database indexes are used for faster queries, and large binary fields like `imageData` are excluded from list queries. Frontend caching is optimized with React Query (staleTime: Infinity, gcTime: 30 minutes).
 - **Monitoring:** A feature allows monitoring specific search terms, tracking and displaying their result counts, and quickly re-running searches. Monitored searches also use fuzzy matching.
-- **Management:** Comprehensive features for renaming and deleting directories and images, including cascade deletion for directories.
+- **Management:** Comprehensive features for renaming and deleting directories and images, including cascade deletion for directories. Multi-level subdirectories are supported through the `parentId` field, allowing unlimited nesting (e.g., Root > Archives > 1920s > Legal). Frontend displays nested structure with proper indentation in sidebar and full hierarchy in breadcrumb navigation.
 
 ## External Dependencies
 *   **UI Frameworks**: Radix UI, shadcn/ui, Tailwind CSS

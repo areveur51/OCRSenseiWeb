@@ -199,23 +199,21 @@ export default function ProjectDetail() {
 
     try {
       // Build the path based on current directory
-      const parentPath = currentDirectory && currentDirectory.name !== "root" 
-        ? currentDirectory.path 
-        : "";
+      const parentPath = currentDirectory ? currentDirectory.path : "";
       const newPath = `${parentPath}/${newDirName.trim()}`;
       
       await apiRequest("POST", "/api/directories", {
         projectId,
         name: newDirName.trim(),
         path: newPath,
-        parentId: currentDirectory && currentDirectory.name !== "root" ? currentDirectory.id : null,
+        parentId: currentDirectory ? currentDirectory.id : null,
       });
 
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/directories`] });
       
       toast({
         title: "Directory Created",
-        description: `Subdirectory "${newDirName.trim()}" has been created${currentDirectory && currentDirectory.name !== "root" ? ` in "${currentDirectory.name}"` : ""}.`,
+        description: `Subdirectory "${newDirName.trim()}" has been created${currentDirectory ? ` in "${currentDirectory.name}"` : ""}.`,
       });
       
       setCreateDirDialogOpen(false);
@@ -257,13 +255,20 @@ export default function ProjectDetail() {
   };
 
   const handleRenameDirectory = async () => {
-    if (!currentDirectory || !renameDirValue.trim() || !currentDirectory.parentId) return;
+    if (!currentDirectory || !renameDirValue.trim()) return;
+    // Don't allow renaming root directories (those with no parent)
+    if (!currentDirectory.parentId) {
+      toast({
+        variant: "destructive",
+        title: "Cannot Rename",
+        description: "Root directories cannot be renamed.",
+      });
+      return;
+    }
 
     try {
       // Build new path based on parent
-      const parentDir = currentDirectory.parentId 
-        ? directories?.find(d => d.id === currentDirectory.parentId) 
-        : null;
+      const parentDir = directories?.find(d => d.id === currentDirectory.parentId);
       const parentPath = parentDir ? parentDir.path : "";
       const newPath = `${parentPath}/${renameDirValue.trim()}`;
       
@@ -292,7 +297,16 @@ export default function ProjectDetail() {
   };
 
   const handleDeleteDirectory = async () => {
-    if (!currentDirectory || !currentDirectory.parentId) return;
+    if (!currentDirectory) return;
+    // Don't allow deleting root directories (those with no parent)
+    if (!currentDirectory.parentId) {
+      toast({
+        variant: "destructive",
+        title: "Cannot Delete",
+        description: "Root directories cannot be deleted.",
+      });
+      return;
+    }
 
     try {
       await apiRequest("DELETE", `/api/directories/${currentDirectory.id}`);
@@ -306,11 +320,7 @@ export default function ProjectDetail() {
       
       setDeleteDirDialogOpen(false);
       // Navigate to parent directory
-      if (currentDirectory.parentId) {
-        setLocation(`/project/${projectId}/dir/${currentDirectory.parentId}`);
-      } else {
-        setLocation(`/project/${projectId}`);
-      }
+      setLocation(`/project/${projectId}/dir/${currentDirectory.parentId}`);
     } catch (error: any) {
       toast({
         variant: "destructive",
