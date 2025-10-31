@@ -22,13 +22,11 @@ export function UploadZone({ onFilesSelected }: UploadZoneProps) {
     setIsDragging(false);
     const files = Array.from(e.dataTransfer.files);
     onFilesSelected?.(files);
-    console.log('Files dropped:', files.map(f => f.name));
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     onFilesSelected?.(files);
-    console.log('Files selected:', files.map(f => f.name));
   };
 
   return (

@@ -19,7 +19,6 @@ export function SearchBar({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch?.(query);
-    console.log('Search query:', query);
   };
 
   return (

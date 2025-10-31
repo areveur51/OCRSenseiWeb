@@ -28,12 +28,10 @@ export function ImageViewer({
 
   const handleZoomIn = () => {
     setZoom((prev) => Math.min(prev + 25, 200));
-    console.log("Zoom in");
   };
 
   const handleZoomOut = () => {
     setZoom((prev) => Math.max(prev - 25, 50));
-    console.log("Zoom out");
   };
 
   const handleRegionHover = (regionId: string | null) => {
@@ -67,7 +65,7 @@ export function ImageViewer({
         <Button
           size="icon"
           variant="ghost"
-          onClick={() => console.log("Rotate")}
+          onClick={() => {}}
           data-testid="button-rotate"
         >
           <RotateCw className="h-4 w-4" />
@@ -75,7 +73,7 @@ export function ImageViewer({
         <Button
           size="icon"
           variant="ghost"
-          onClick={() => console.log("Fullscreen")}
+          onClick={() => {}}
           data-testid="button-fullscreen"
         >
           <Maximize className="h-4 w-4" />

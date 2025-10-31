@@ -35,7 +35,6 @@ export function CreateProjectDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onCreateProject?.({ name, description });
-    console.log("Create project:", { name, description });
     setName("");
     setDescription("");
     setOpen(false);
