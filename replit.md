@@ -12,6 +12,15 @@ OCRSenseiWeb is a Matrix-themed OCR application that extracts text from scanned 
 Preferred communication style: Simple, everyday language.
 
 ## Recent Updates (October 31, 2025)
+- ✅ **Dashboard & Search Pagination**: Comprehensive pagination system across all listing views
+  - **Dashboard (Projects)**: Default 9 projects per page with options for 9/25/50/100
+  - **Search Results**: 25 results per page with options for 25/50/100
+  - **Images**: 25 images per page with options for 25/50/100
+  - Previous/Next navigation with "Showing X-Y of Z" indicators
+  - Automatic state synchronization when filters reduce total pages
+  - Dashboard uses client-side pagination; Search uses server-side pagination for efficiency
+  - Page size and current page persist during browsing
+  - Automatically resets to page 1 when search query or page size changes
 - ✅ **Enhanced Directory Drag & Drop**: Advanced reordering and parent-changing functionality
   - Edit mode toggle (Edit/Done button) in sidebar for each project's directory list
   - Drag handle icon (GripVertical) appears when in edit mode
@@ -24,12 +33,6 @@ Preferred communication style: Simple, everyday language.
   - Backend API supports both reordering (sortOrder swap) and parent changing (parentId update)
   - Toast notifications for success/error feedback with descriptive messages
   - Added sortOrder field to directories schema
-- ✅ **Image Pagination**: Added pagination controls for image listings
-  - Page size selector with options for 25, 50, or 100 images per page (default: 25)
-  - Previous/Next navigation buttons with proper disabled states
-  - Shows "Showing X-Y of Z images" with current page and total pages
-  - Automatically resets to page 1 when switching directories or changing page size
-  - Backend returns paginated response with total count and page information
 - ✅ **Image Reprocessing**: Added ability to reprocess already-processed images
   - Reprocess button available on all image detail pages for both processed and unprocessed images
   - Visual feedback with "Queueing..." state and disabled button during API request
