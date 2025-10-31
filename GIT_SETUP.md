@@ -6,8 +6,8 @@ This guide provides step-by-step instructions for setting up Git and pushing OCR
 
 ```bash
 # Configure Git user
-git config user.name "areveur51"
-git config user.email "areveur51@gmail.com"
+git config user.name "YOUR_USERNAME"
+git config user.email "your-email@example.com"
 
 # Verify configuration
 git config --list
@@ -20,7 +20,7 @@ git config --list
 git init
 
 # Add remote repository
-git remote add origin https://github.com/areveur51/OCRSenseiWeb.git
+git remote add origin https://github.com/YOUR_USERNAME/OCRSenseiWeb.git
 
 # Verify remote
 git remote -v

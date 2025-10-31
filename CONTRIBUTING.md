@@ -4,14 +4,15 @@ Thank you for your interest in contributing to OCRSenseiWeb! We welcome contribu
 
 ## Getting Started
 
-1. Fork the repository
+1. Fork the repository on GitHub
 2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/OCRSenseiWeb.git`
-3. Create a new branch: `git checkout -b feature/your-feature-name`
-4. Make your changes
-5. Test your changes
-6. Commit your changes: `git commit -m "Add your feature"`
-7. Push to your fork: `git push origin feature/your-feature-name`
-8. Submit a pull request
+3. Configure git: `git config user.name "YOUR_USERNAME"` and `git config user.email "your-email@example.com"`
+4. Create a new branch: `git checkout -b feature/your-feature-name`
+5. Make your changes
+6. Test your changes
+7. Commit your changes: `git commit -m "Add your feature"`
+8. Push to your fork: `git push origin feature/your-feature-name`
+9. Submit a pull request
 
 ## Development Guidelines
 

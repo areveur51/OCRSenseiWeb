@@ -22,8 +22,8 @@ This checklist will help you push OCRSenseiWeb to GitHub and prepare it for open
 
 ### Step 1: Configure Git
 ```bash
-git config user.name "areveur51"
-git config user.email "areveur51@gmail.com"
+git config user.name "YOUR_USERNAME"
+git config user.email "your-email@example.com"
 ```
 
 ### Step 2: Check Status
@@ -68,7 +68,7 @@ Includes:
 
 ### Step 5: Add Remote (if not already added)
 ```bash
-git remote add origin https://github.com/areveur51/OCRSenseiWeb.git
+git remote add origin https://github.com/YOUR_USERNAME/OCRSenseiWeb.git
 ```
 
 ### Step 6: Push to GitHub
