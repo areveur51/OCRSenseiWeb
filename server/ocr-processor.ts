@@ -1,5 +1,6 @@
 import { spawn } from "child_process";
 import path from "path";
+import fs from "fs";
 import { storage } from "./storage";
 import { fileStorage } from "./file-storage";
 
@@ -46,7 +47,24 @@ export class OcrProcessor {
       deskew: settings.ocrDeskew === 1,
     };
 
-    const imagePath = fileStorage.getFilePath(image.filePath);
+    let imagePath: string;
+    let tempFile = false;
+
+    // Check if image is stored in database or filesystem
+    if (image.imageData) {
+      // Image is in database, create temporary file
+      const tempDir = path.join(process.cwd(), "temp");
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      imagePath = path.join(tempDir, `ocr_${imageId}_${Date.now()}.jpg`);
+      fs.writeFileSync(imagePath, image.imageData);
+      tempFile = true;
+    } else {
+      // Image is in filesystem (legacy)
+      imagePath = fileStorage.getFilePath(image.filePath);
+    }
+
     const pythonScript = path.join(process.cwd(), "server", "ocr-service.py");
     const configJson = JSON.stringify(ocrConfig);
 
@@ -64,6 +82,15 @@ export class OcrProcessor {
       });
 
       pythonProcess.on("close", (code) => {
+        // Clean up temporary file if it was created
+        if (tempFile && fs.existsSync(imagePath)) {
+          try {
+            fs.unlinkSync(imagePath);
+          } catch (error) {
+            console.error("Failed to delete temporary file:", imagePath, error);
+          }
+        }
+
         if (code !== 0) {
           console.error("OCR Python process failed:");
           console.error("Exit code:", code);
@@ -84,6 +111,14 @@ export class OcrProcessor {
       });
 
       pythonProcess.on("error", (error) => {
+        // Clean up temporary file if it was created
+        if (tempFile && fs.existsSync(imagePath)) {
+          try {
+            fs.unlinkSync(imagePath);
+          } catch (cleanupError) {
+            console.error("Failed to delete temporary file:", imagePath, cleanupError);
+          }
+        }
         reject(new Error(`Failed to spawn OCR process: ${error.message}`));
       });
     });
