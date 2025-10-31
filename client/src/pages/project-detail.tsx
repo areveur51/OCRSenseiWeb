@@ -59,9 +59,12 @@ export default function ProjectDetail() {
   const [createDirDialogOpen, setCreateDirDialogOpen] = useState(false);
   const [renameDirDialogOpen, setRenameDirDialogOpen] = useState(false);
   const [deleteDirDialogOpen, setDeleteDirDialogOpen] = useState(false);
+  const [renameProjectDialogOpen, setRenameProjectDialogOpen] = useState(false);
+  const [deleteProjectDialogOpen, setDeleteProjectDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [newDirName, setNewDirName] = useState("");
   const [renameDirValue, setRenameDirValue] = useState("");
+  const [renameProjectValue, setRenameProjectValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: project } = useQuery<ProjectWithStats>({
@@ -333,6 +336,60 @@ export default function ProjectDetail() {
     }
   };
 
+  const handleRenameProject = async () => {
+    if (!project || !renameProjectValue.trim()) return;
+
+    try {
+      const response = await apiRequest("PATCH", `/api/projects/${project.id}`, {
+        name: renameProjectValue.trim(),
+      });
+      const updatedProject = await response.json();
+
+      queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      
+      toast({
+        title: "Project Renamed",
+        description: `Project renamed to "${renameProjectValue.trim()}".`,
+      });
+      
+      setRenameProjectDialogOpen(false);
+      // Navigate to new slug
+      setLocation(`/p/${updatedProject.slug}`);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Rename Failed",
+        description: error.message || "Failed to rename project",
+      });
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!project) return;
+
+    try {
+      await apiRequest("DELETE", `/api/projects/${project.id}`);
+
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      
+      toast({
+        title: "Project Deleted",
+        description: `Project "${project.name}" and all its contents have been deleted.`,
+      });
+      
+      setDeleteProjectDialogOpen(false);
+      // Navigate to projects page
+      setLocation("/projects");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: error.message || "Failed to delete project",
+      });
+    }
+  };
+
   const completedCount = images?.filter(img => img.processingStatus === "completed").length || 0;
   const processingCount = images?.filter(img => img.processingStatus === "processing").length || 0;
   const pendingCount = images?.filter(img => img.processingStatus === "pending").length || 0;
@@ -457,7 +514,7 @@ export default function ProjectDetail() {
                   {project?.name} {directoryPath.length > 0 ? ` / ${directoryPath.map(d => d.name).join(' / ')}` : ""}
                 </span>
               </h1>
-              {currentDirectory && currentDirectory.parentId && (
+              {currentDirectory && currentDirectory.parentId ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" data-testid="button-directory-menu">
@@ -479,6 +536,31 @@ export default function ProjectDetail() {
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Delete Directory
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : directoryPath.length === 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" data-testid="button-project-menu">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => {
+                      setRenameProjectValue(project?.name || "");
+                      setRenameProjectDialogOpen(true);
+                    }} data-testid="menu-item-rename-project">
+                      <Edit className="h-4 w-4 mr-2" />
+                      Rename Project
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => setDeleteProjectDialogOpen(true)}
+                      className="text-destructive"
+                      data-testid="menu-item-delete-project"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Project
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -657,6 +739,54 @@ export default function ProjectDetail() {
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteDirectory} className="bg-destructive hover:bg-destructive/90" data-testid="button-confirm-delete">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={renameProjectDialogOpen} onOpenChange={setRenameProjectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Project</DialogTitle>
+            <DialogDescription>
+              Enter a new name for this project
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rename-project-name">Project Name</Label>
+              <Input
+                id="rename-project-name"
+                value={renameProjectValue}
+                onChange={(e) => setRenameProjectValue(e.target.value)}
+                placeholder="Enter new name"
+                data-testid="input-rename-project"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameProjectDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRenameProject} disabled={!renameProjectValue.trim()} data-testid="button-confirm-rename-project">
+              Rename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={deleteProjectDialogOpen} onOpenChange={setDeleteProjectDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the project "{project?.name}" and all its directories, images, and OCR results. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-project">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteProject} className="bg-destructive hover:bg-destructive/90" data-testid="button-confirm-delete-project">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -1,5 +1,6 @@
 import { db } from "./db";
-import { eq, desc, and, like, ilike, or, sql, inArray } from "drizzle-orm";
+import { eq, desc, and, like, ilike, or, sql, inArray, not } from "drizzle-orm";
+import { generateUniqueSlug } from "@shared/slugs";
 import {
   projects,
   directories,
