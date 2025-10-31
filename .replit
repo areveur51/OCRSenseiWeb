@@ -4,7 +4,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["gcc", "gcc-unwrapped", "glibc", "hdf5", "libGL", "libGLU", "libcxx", "libstdcxx5", "python311", "python311Packages.numpy", "python311Packages.opencv4", "python311Packages.pillow", "python311Packages.pip", "python311Packages.torch", "python311Packages.torchvision", "tesseract"]
+packages = ["freetype", "gcc", "gcc-unwrapped", "glibc", "hdf5", "lcms2", "libGL", "libGLU", "libcxx", "libimagequant", "libjpeg", "libstdcxx5", "libtiff", "libwebp", "libxcrypt", "openjpeg", "python311", "python311Packages.numpy", "python311Packages.opencv4", "python311Packages.pillow", "python311Packages.pip", "python311Packages.torch", "python311Packages.torchvision", "tcl", "tesseract", "tk", "zlib"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -16,16 +16,16 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
+localPort = 38303
+externalPort = 3003
+
+[[ports]]
 localPort = 40385
 externalPort = 3001
 
 [[ports]]
 localPort = 42539
 externalPort = 3000
-
-[[ports]]
-localPort = 43369
-externalPort = 4200
 
 [[ports]]
 localPort = 44125
