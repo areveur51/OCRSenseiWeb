@@ -7,17 +7,13 @@ channel = "stable-24_05"
 packages = ["freetype", "gcc", "gcc-unwrapped", "glibc", "hdf5", "lcms2", "libGL", "libGLU", "libcxx", "libimagequant", "libjpeg", "libstdcxx5", "libtiff", "libwebp", "libxcrypt", "openjpeg", "python311", "python311Packages.numpy", "python311Packages.opencv4", "python311Packages.pillow", "python311Packages.pip", "python311Packages.torch", "python311Packages.torchvision", "tcl", "tesseract", "tk", "zlib"]
 
 [deployment]
-deploymentTarget = "autoscale"
+deploymentTarget = "gce"
 build = ["npm", "run", "build"]
 run = ["npm", "run", "start"]
 
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 33827
-externalPort = 3003
 
 [[ports]]
 localPort = 40385
