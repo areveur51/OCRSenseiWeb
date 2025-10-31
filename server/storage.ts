@@ -178,6 +178,15 @@ export class DbStorage implements IStorage {
     return result.rowCount ? result.rowCount > 0 : false;
   }
 
+  async changeDirectoryParent(directoryId: number, newParentId: number | null, newPath: string): Promise<Directory | undefined> {
+    const [updated] = await db
+      .update(directories)
+      .set({ parentId: newParentId, path: newPath })
+      .where(eq(directories.id, directoryId))
+      .returning();
+    return updated;
+  }
+
   // Images
   async getImagesByDirectory(directoryId: number): Promise<Image[]> {
     // Omit imageData from list queries for performance (large binary field)

@@ -307,6 +307,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/directories/:id/change-parent", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { newParentId, newPath } = req.body;
+      
+      if (typeof newPath !== 'string') {
+        return res.status(400).json({ error: "newPath must be a string" });
+      }
+      
+      const updated = await storage.changeDirectoryParent(
+        id, 
+        newParentId === null ? null : parseInt(newParentId),
+        newPath
+      );
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Directory not found" });
+      }
+      
+      res.status(200).json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Images
   app.get("/api/directories/:directoryId/images", async (req, res) => {
     try {
