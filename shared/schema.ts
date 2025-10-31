@@ -173,7 +173,14 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
 });
 
 export const updateSettingsSchema = z.object({
-  fuzzySearchVariations: z.number().int().min(1).max(3),
+  fuzzySearchVariations: z.number().int().min(1).max(3).optional(),
+  ocrEngineMode: z.number().int().min(0).max(3).optional(),
+  ocrPsmConfig1: z.number().int().min(0).max(13).optional(),
+  ocrPsmConfig2: z.number().int().min(0).max(13).optional(),
+  ocrPreprocessing: z.number().int().min(0).max(1).optional(),
+  ocrUpscale: z.number().int().min(0).max(1).optional(),
+  ocrDenoise: z.number().int().min(0).max(1).optional(),
+  ocrDeskew: z.number().int().min(0).max(1).optional(),
 });
 
 // Select types

@@ -12,6 +12,15 @@ OCRSenseiWeb is a Matrix-themed OCR application that extracts text from scanned 
 Preferred communication style: Simple, everyday language.
 
 ## Recent Updates (October 31, 2025)
+- ✅ **OCR Engine Enhancements**: Implemented configurable OCR preprocessing pipeline
+  - Added OpenCV-based image preprocessing with grayscale conversion, upscaling (1.5x), denoising, Otsu binarization, and auto-deskewing
+  - Configurable OCR engine mode (OEM 0-3): Legacy, LSTM, Legacy+LSTM, Auto-select
+  - Dual PSM (Page Segmentation Mode) configuration for verification passes
+  - Master preprocessing toggle with individual controls for upscale, denoise, and deskew
+  - Settings UI with comprehensive OCR configuration options
+  - All preprocessing enabled by default for optimal accuracy on scanned documents
+  - Uses Tesseract 5.3.4 with LSTM neural networks for superior text recognition
+  - Settings persist to database and dynamically configure Python OCR service
 - ✅ **Directory Creation Enhancement**: Added parent folder selector to directory creation dialog
   - Choose where to create new directories: root level "/" or within any existing directory
   - Allows creating multiple root-level directories (e.g., root_dir_1, root_dir_2 at same level)
@@ -59,7 +68,7 @@ The backend is an Express.js application with TypeScript, providing a RESTful AP
 The application utilizes a PostgreSQL database, accessed via Neon's serverless driver and managed with Drizzle ORM. The schema includes tables for `projects`, `directories`, `images`, `ocr_results`, `processing_queue`, `monitored_searches`, and `settings`. Each resource (project, directory, image) has both a numeric ID and a unique slug for URL-friendly access. Zod schemas ensure type-safe validation. Images are stored as binary data (`bytea`) directly in PostgreSQL.
 
 ### OCR Processing
-OCR processing is managed by a Python-based service using `pytesseract` with a dual-pass verification strategy. It employs two different Tesseract configurations (PSM 6 and PSM 3), selecting the result with higher confidence. Word-level bounding boxes are extracted for frontend highlighting. Processing is asynchronous, with images queued and processed in batches by a background worker.
+OCR processing is managed by a Python-based service using `pytesseract` (Tesseract 5.3.4) with LSTM neural networks and a configurable dual-pass verification strategy. Images are preprocessed using OpenCV (grayscale conversion, 1.5x upscaling, median denoising, Otsu binarization, auto-deskewing) before OCR analysis. The system employs two different configurable Tesseract PSM modes (default: PSM 6 and PSM 3), selecting the result with higher confidence. Word-level bounding boxes are extracted for frontend highlighting. All OCR parameters (engine mode, PSM configurations, preprocessing toggles) are user-configurable via the Settings page and persist to the database. Processing is asynchronous, with images queued and processed in batches by a background worker.
 
 ### File Storage Strategy
 Images are stored as binary data (bytea) in PostgreSQL within the `imageData` column of the `images` table, providing data integrity and simplified backups. The system maintains filesystem fallback for legacy images.
@@ -67,10 +76,12 @@ Images are stored as binary data (bytea) in PostgreSQL within the `imageData` co
 ### System Enhancements
 - **Shareable URLs:** Human-readable slug-based URLs for all resources. Slugs are auto-generated from entity names, converted to lowercase with hyphens replacing spaces/special characters. Uniqueness is ensured through collision detection. Backend provides both slug-based (`/api/p/:slug`) and ID-based (`/api/projects/:id`) routes for maximum flexibility.
 - **Search:** Features fuzzy matching using PostgreSQL pg_trgm extension with word_similarity function. Character variation tolerance is configurable (1-3 letter differences). Results are ordered by: exact matches first, then fuzzy matches by similarity score, then by OCR confidence. Search queries are case-insensitive and properly encoded.
-- **Settings:** Configurable fuzzy search behavior via dedicated Settings page. Users can select fuzzy search variation tolerance (1, 2, or 3 character differences, default: 2). Settings are stored in a singleton database table and dynamically adjust similarity thresholds:
-  - 1 character: 0.6 threshold (strict matching)
-  - 2 characters: 0.3 threshold (balanced, default)
-  - 3 characters: 0.2 threshold (loose matching)
+- **Settings:** Configurable fuzzy search behavior and OCR processing via dedicated Settings page. 
+  - Fuzzy search: Users can select variation tolerance (1, 2, or 3 character differences, default: 2) which dynamically adjusts similarity thresholds (0.6, 0.3, 0.2 respectively)
+  - OCR Engine: Configurable Tesseract OEM mode (0=Legacy, 1=LSTM only [default], 2=Legacy+LSTM, 3=Auto-select)
+  - Page Segmentation: Dual PSM configuration for verification passes (Config 1 default: PSM 6, Config 2 default: PSM 3)
+  - Preprocessing: Master toggle with individual controls for upscaling (1.5x), denoising (median blur), and auto-deskewing
+  - All settings persist to database and dynamically configure OCR processing pipeline
 - **Performance:** Database indexes are used for faster queries (including slug indexes for quick lookups), and large binary fields like `imageData` are excluded from list queries. Frontend caching is optimized with React Query (staleTime: Infinity, gcTime: 30 minutes).
 - **Monitoring:** A feature allows monitoring specific search terms, tracking and displaying their result counts, and quickly re-running searches. Monitored searches also use fuzzy matching.
 - **Management:** Comprehensive features for renaming and deleting directories and images, including cascade deletion for directories. Multi-level subdirectories are supported through the `parentId` field, allowing unlimited nesting (e.g., Root > Archives > 1920s > Legal). Frontend displays nested structure with proper indentation in sidebar and full hierarchy in breadcrumb navigation using slug-based URLs.
@@ -78,7 +89,7 @@ Images are stored as binary data (bytea) in PostgreSQL within the `imageData` co
 ## External Dependencies
 *   **UI Frameworks**: Radix UI, shadcn/ui, Tailwind CSS
 *   **Icons**: Lucide React
-*   **OCR**: pytesseract (Python), Tesseract OCR engine, Pillow (Python)
+*   **OCR**: pytesseract (Python), Tesseract OCR engine, Pillow (Python), OpenCV (Python)
 *   **Frontend**: React, TypeScript, Vite
 *   **Backend**: Express.js, Node.js
 *   **Database**: PostgreSQL (Neon) with pg_trgm extension for fuzzy search, Drizzle ORM
