@@ -12,11 +12,18 @@ OCRSenseiWeb is a Matrix-themed OCR application that extracts text from scanned 
 Preferred communication style: Simple, everyday language.
 
 ## Recent Updates (October 31, 2025)
+- ✅ **Shareable Human-Readable URLs**: Implemented slug-based URL system for all resources
+  - Projects use `/p/:slug` pattern (e.g., `/p/31st-infantry-regiment`)
+  - Directories use `/p/:projectSlug/:dirSlug` (e.g., `/p/31st-infantry-regiment/roster-1920`)
+  - Images use `/p/:projectSlug/:dirSlug/img/:imageSlug` (e.g., `/p/31st-infantry-regiment/roster-1920/img/page-001`)
+  - Slugs auto-generated from names, URL-safe, and guaranteed unique
+  - All navigation updated to use slug-based URLs for better shareability
+  - Backend maintains both slug-based and ID-based API routes for flexibility
 - ✅ **Multi-Level Subdirectories**: Added support for unlimited nested subdirectory levels within projects
   - Subdirectories can now contain subdirectories (e.g., Root > Folder1 > Folder2 > Folder3...)
   - Breadcrumb navigation shows full directory hierarchy
   - Sidebar displays nested tree structure with proper indentation
-  - URL routing uses directory IDs for reliable navigation
+  - URL routing uses slugs for human-readable, shareable navigation
 - ✅ Updated all ASCII art to cohesive metric style (3-4 lines, bold double-line borders)
 - ✅ Created 23 unique project icon variations
 - ✅ Added comprehensive documentation with screenshots
@@ -27,13 +34,13 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend
-The frontend is built with React and TypeScript using Vite, leveraging `shadcn/ui` components (Radix UI) and styled with Tailwind CSS, adhering to a custom Matrix terminal theme. It features dark backgrounds, neon green text, monospace fonts, ASCII art, and animated cursors. Wouter handles client-side routing, and state management uses React Query for server state and React hooks for local component state. Key features include a dashboard, project/directory management, OCR-highlighted image views, and full-text search.
+The frontend is built with React and TypeScript using Vite, leveraging `shadcn/ui` components (Radix UI) and styled with Tailwind CSS, adhering to a custom Matrix terminal theme. It features dark backgrounds, neon green text, monospace fonts, ASCII art, and animated cursors. Wouter handles client-side routing with slug-based URLs for human-readable, shareable links. State management uses React Query for server state and React hooks for local component state. Key features include a dashboard, project/directory management, OCR-highlighted image views, and full-text search.
 
 ### Backend
 The backend is an Express.js application with TypeScript, providing a RESTful API for project, directory, image, and search functionalities. It handles file uploads via Multer (17MB limit, various image/PDF formats) and supports URL-based image downloads.
 
 ### Data Storage
-The application utilizes a PostgreSQL database, accessed via Neon's serverless driver and managed with Drizzle ORM. The schema includes tables for `projects`, `directories`, `images`, `ocr_results`, `processing_queue`, `monitored_searches`, and `settings`. Zod schemas ensure type-safe validation. Images are stored as binary data (`bytea`) directly in PostgreSQL.
+The application utilizes a PostgreSQL database, accessed via Neon's serverless driver and managed with Drizzle ORM. The schema includes tables for `projects`, `directories`, `images`, `ocr_results`, `processing_queue`, `monitored_searches`, and `settings`. Each resource (project, directory, image) has both a numeric ID and a unique slug for URL-friendly access. Zod schemas ensure type-safe validation. Images are stored as binary data (`bytea`) directly in PostgreSQL.
 
 ### OCR Processing
 OCR processing is managed by a Python-based service using `pytesseract` with a dual-pass verification strategy. It employs two different Tesseract configurations (PSM 6 and PSM 3), selecting the result with higher confidence. Word-level bounding boxes are extracted for frontend highlighting. Processing is asynchronous, with images queued and processed in batches by a background worker.
@@ -42,14 +49,15 @@ OCR processing is managed by a Python-based service using `pytesseract` with a d
 Images are stored as binary data (bytea) in PostgreSQL within the `imageData` column of the `images` table, providing data integrity and simplified backups. The system maintains filesystem fallback for legacy images.
 
 ### System Enhancements
+- **Shareable URLs:** Human-readable slug-based URLs for all resources. Slugs are auto-generated from entity names, converted to lowercase with hyphens replacing spaces/special characters. Uniqueness is ensured through collision detection. Backend provides both slug-based (`/api/p/:slug`) and ID-based (`/api/projects/:id`) routes for maximum flexibility.
 - **Search:** Features fuzzy matching using PostgreSQL pg_trgm extension with word_similarity function. Character variation tolerance is configurable (1-3 letter differences). Results are ordered by: exact matches first, then fuzzy matches by similarity score, then by OCR confidence. Search queries are case-insensitive and properly encoded.
 - **Settings:** Configurable fuzzy search behavior via dedicated Settings page. Users can select fuzzy search variation tolerance (1, 2, or 3 character differences, default: 2). Settings are stored in a singleton database table and dynamically adjust similarity thresholds:
   - 1 character: 0.6 threshold (strict matching)
   - 2 characters: 0.3 threshold (balanced, default)
   - 3 characters: 0.2 threshold (loose matching)
-- **Performance:** Database indexes are used for faster queries, and large binary fields like `imageData` are excluded from list queries. Frontend caching is optimized with React Query (staleTime: Infinity, gcTime: 30 minutes).
+- **Performance:** Database indexes are used for faster queries (including slug indexes for quick lookups), and large binary fields like `imageData` are excluded from list queries. Frontend caching is optimized with React Query (staleTime: Infinity, gcTime: 30 minutes).
 - **Monitoring:** A feature allows monitoring specific search terms, tracking and displaying their result counts, and quickly re-running searches. Monitored searches also use fuzzy matching.
-- **Management:** Comprehensive features for renaming and deleting directories and images, including cascade deletion for directories. Multi-level subdirectories are supported through the `parentId` field, allowing unlimited nesting (e.g., Root > Archives > 1920s > Legal). Frontend displays nested structure with proper indentation in sidebar and full hierarchy in breadcrumb navigation.
+- **Management:** Comprehensive features for renaming and deleting directories and images, including cascade deletion for directories. Multi-level subdirectories are supported through the `parentId` field, allowing unlimited nesting (e.g., Root > Archives > 1920s > Legal). Frontend displays nested structure with proper indentation in sidebar and full hierarchy in breadcrumb navigation using slug-based URLs.
 
 ## External Dependencies
 *   **UI Frameworks**: Radix UI, shadcn/ui, Tailwind CSS
