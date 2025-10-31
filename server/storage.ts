@@ -235,11 +235,7 @@ export class DbStorage implements IStorage {
     // Start the recursive update from root directories (parentId: null)
     await updateDirectoryTree(null, newDir.id, newPath);
 
-    // Update all images to belong to the target project's directories (paths already updated)
-    await db
-      .update(images)
-      .set({ directoryId: db.raw(`directory_id`) }) // No-op to trigger any cascading updates if needed
-      .where(sql`directory_id IN (SELECT id FROM directories WHERE project_id = ${targetProjectId})`);
+    // Images automatically follow their directories (no update needed)
 
     // Delete the old project
     await this.deleteProject(projectId);
@@ -274,7 +270,7 @@ export class DbStorage implements IStorage {
     const allOldDirs = await db
       .select()
       .from(directories)
-      .where(eq(directories.projectId, oldProjectId));
+      .where(eq(directories.projectId, oldProjectId!));
 
     // Find all descendants of this directory (recursively)
     const findDescendants = (parentId: number): number[] => {
