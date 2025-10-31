@@ -34,6 +34,7 @@ export interface IStorage {
   updateProject(id: number, updates: Partial<InsertProject>): Promise<Project | undefined>;
   deleteProject(id: number): Promise<boolean>;
   convertProjectToDirectory(projectId: number, targetProjectId: number, newParentDirId?: number): Promise<Directory>;
+  convertDirectoryToProject(directoryId: number): Promise<Project>;
 
   // Directories
   getDirectoriesByProject(projectId: number): Promise<Directory[]>;
@@ -186,6 +187,76 @@ export class DbStorage implements IStorage {
     await this.deleteProject(projectId);
 
     return newDir;
+  }
+
+  async convertDirectoryToProject(directoryId: number): Promise<Project> {
+    const directory = await this.getDirectory(directoryId);
+    if (!directory) {
+      throw new Error("Directory not found");
+    }
+
+    // Generate unique slug for new project
+    const { generateSlug } = await import("@shared/slugs");
+    const baseSlug = generateSlug(directory.name);
+    const allProjects = await this.getAllProjects();
+    const existingSlugs = allProjects.map(p => p.slug);
+    const { generateUniqueSlug } = await import("@shared/slugs");
+    const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
+
+    // Create new project
+    const [newProject] = await db.insert(projects).values({
+      name: directory.name,
+      slug: uniqueSlug,
+      description: null,
+    }).returning();
+
+    // Get all child directories of this directory
+    const childDirs = await db
+      .select()
+      .from(directories)
+      .where(eq(directories.parentId, directoryId));
+
+    // Update all child directories to belong to the new project and update their paths
+    for (const child of childDirs) {
+      const newPath = `/${child.name}`;
+      await db
+        .update(directories)
+        .set({
+          projectId: newProject.id,
+          parentId: null,  // Root level in new project
+          path: newPath
+        })
+        .where(eq(directories.id, child.id));
+    }
+
+    // Move images from the directory to a new root directory in the new project
+    const dirImages = await db
+      .select()
+      .from(images)
+      .where(eq(images.directoryId, directoryId));
+
+    if (dirImages.length > 0) {
+      // Create a root directory in the new project for the images
+      const [rootDir] = await db.insert(directories).values({
+        projectId: newProject.id,
+        name: "Root",
+        slug: "root",
+        path: "/Root",
+        parentId: null,
+        sortOrder: 0,
+      }).returning();
+
+      // Move images to the new root directory
+      await db
+        .update(images)
+        .set({ directoryId: rootDir.id })
+        .where(eq(images.directoryId, directoryId));
+    }
+
+    // Delete the original directory
+    await this.deleteDirectory(directoryId);
+
+    return newProject;
   }
 
   // Directories

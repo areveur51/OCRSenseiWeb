@@ -65,7 +65,13 @@ export class OcrProcessor {
 
       pythonProcess.on("close", (code) => {
         if (code !== 0) {
-          reject(new Error(`OCR process failed: ${errorData}`));
+          console.error("OCR Python process failed:");
+          console.error("Exit code:", code);
+          console.error("Stderr:", errorData);
+          console.error("Stdout:", outputData);
+          console.error("Image path:", imagePath);
+          console.error("Config:", configJson);
+          reject(new Error(`OCR process exited with code ${code}. Stderr: ${errorData}. Stdout: ${outputData}`));
           return;
         }
 

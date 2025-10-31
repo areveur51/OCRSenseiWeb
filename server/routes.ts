@@ -150,6 +150,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Directories
+  app.post("/api/directories/:id/convert-to-project", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      const newProject = await storage.convertDirectoryToProject(id);
+      res.status(200).json(newProject);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
   app.get("/api/projects/:projectId/directories", async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
