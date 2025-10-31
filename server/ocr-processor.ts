@@ -180,11 +180,8 @@ export class OcrProcessor {
       throw new Error(`Queue item ${queueId} not found`);
     }
 
-    await storage.updateQueueItem(queueId, {
-      status: "processing",
-      startedAt: new Date(),
-    });
-
+    // Note: Status already set to 'processing' by claimNextQueueItem()
+    
     try {
       const result = await this.processImage(queueItem.imageId);
 
@@ -251,18 +248,13 @@ export class OcrProcessor {
     
     while (this.processing) {
       try {
-        const queuedItems = await storage.getQueuedItems();
-        
-        if (queuedItems.length === 0) {
-          await new Promise((resolve) => setTimeout(resolve, 5000));
-          continue;
-        }
-
-        // Find first item not being processed by another worker
-        const item = queuedItems.find(item => item.status === 'pending');
+        // Atomically claim the next pending queue item
+        // This prevents race conditions where multiple workers claim the same item
+        const item = await storage.claimNextQueueItem();
         
         if (!item) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
+          // No items available, wait before checking again
+          await new Promise((resolve) => setTimeout(resolve, 5000));
           continue;
         }
 

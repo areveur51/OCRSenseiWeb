@@ -66,6 +66,7 @@ export interface IStorage {
   getQueueItemByImage(imageId: number): Promise<ProcessingQueue | undefined>;
   createQueueItem(item: InsertProcessingQueue): Promise<ProcessingQueue>;
   updateQueueItem(id: number, updates: Partial<ProcessingQueue>): Promise<ProcessingQueue | undefined>;
+  claimNextQueueItem(): Promise<ProcessingQueue | undefined>;
 
   // Search
   searchText(query: string, options?: { offset?: number; limit?: number }): Promise<{ results: Array<{ image: Image; ocrResult: OcrResult; projectSlug: string; directorySlug: string; imageSlug: string }>; total: number }>;
@@ -503,6 +504,43 @@ export class DbStorage implements IStorage {
       .where(eq(processingQueue.id, id))
       .returning();
     return updated;
+  }
+
+  async claimNextQueueItem(): Promise<ProcessingQueue | undefined> {
+    // Atomically claim the next pending queue item using FOR UPDATE SKIP LOCKED
+    // This prevents race conditions where multiple workers claim the same item
+    // Using CTE to ensure lock is held during the update
+    const result = await db.execute(sql`
+      WITH next_item AS (
+        SELECT id FROM processing_queue
+        WHERE status = 'pending'
+        ORDER BY priority DESC, created_at ASC
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
+      )
+      UPDATE processing_queue
+      SET status = 'processing', started_at = NOW()
+      FROM next_item
+      WHERE processing_queue.id = next_item.id
+      RETURNING processing_queue.*
+    `);
+
+    if (result.rows.length === 0) {
+      return undefined;
+    }
+
+    const row = result.rows[0] as any;
+    return {
+      id: row.id,
+      imageId: row.image_id,
+      status: row.status,
+      priority: row.priority,
+      attempts: row.attempts,
+      errorMessage: row.error_message,
+      createdAt: row.created_at,
+      startedAt: row.started_at,
+      completedAt: row.completed_at,
+    };
   }
 
   // Search
