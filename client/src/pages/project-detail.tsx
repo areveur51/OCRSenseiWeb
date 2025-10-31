@@ -187,7 +187,11 @@ export default function ProjectDetail() {
         const uploadedImages = await uploadResponse.json();
         const imageCount = uploadedImages.length;
 
+        // Invalidate all relevant caches
         queryClient.invalidateQueries({ queryKey: [`/api/directories/${newDir.id}/images`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}/directories`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}`] });
+        queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
         
         // Check if images were split (more created than uploaded)
         const wasSplit = imageCount > files.length;
@@ -233,7 +237,10 @@ export default function ProjectDetail() {
       const uploadedImages = await response.json();
       const imageCount = uploadedImages.length;
 
+      // Invalidate all relevant caches
       queryClient.invalidateQueries({ queryKey: [`/api/directories/${currentDirectory.id}/images`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       
       // Check if images were split (more created than uploaded)
       const wasSplit = imageCount > files.length;
