@@ -27,7 +27,7 @@ import {
 
 export interface IStorage {
   // Projects
-  getAllProjects(): Promise<Project[]>;
+  getAllProjects(limit?: number): Promise<Project[]>;
   getProject(id: number): Promise<Project | undefined>;
   getProjectBySlug(slug: string): Promise<Project | undefined>;
   createProject(project: InsertProject): Promise<Project>;
@@ -67,7 +67,7 @@ export interface IStorage {
   updateQueueItem(id: number, updates: Partial<ProcessingQueue>): Promise<ProcessingQueue | undefined>;
 
   // Search
-  searchText(query: string): Promise<Array<{ image: Image; ocrResult: OcrResult }>>;
+  searchText(query: string, options?: { offset?: number; limit?: number }): Promise<{ results: Array<{ image: Image; ocrResult: OcrResult; projectSlug: string; directorySlug: string; imageSlug: string }>; total: number }>;
 
   // Monitored Searches
   getMonitoredSearches(): Promise<Array<MonitoredSearch & { resultCount: number }>>;
@@ -88,8 +88,15 @@ export interface IStorage {
 
 export class DbStorage implements IStorage {
   // Projects
-  async getAllProjects(): Promise<Project[]> {
-    return db.select().from(projects).orderBy(desc(projects.createdAt));
+  async getAllProjects(limit?: number): Promise<Project[]> {
+    // Order by updatedAt to show most recently updated projects first
+    let query = db.select().from(projects).orderBy(desc(projects.updatedAt));
+    
+    if (limit) {
+      query = query.limit(limit) as any;
+    }
+    
+    return query;
   }
 
   async getProject(id: number): Promise<Project | undefined> {
@@ -485,20 +492,20 @@ export class DbStorage implements IStorage {
   }
 
   // Search
-  async searchText(query: string): Promise<Array<{ 
-    image: Image; 
-    ocrResult: OcrResult;
-    projectSlug: string;
-    directorySlug: string;
-    imageSlug: string;
-  }>> {
+  async searchText(query: string, options?: { offset?: number; limit?: number }): Promise<{ 
+    results: Array<{ 
+      image: Image; 
+      ocrResult: OcrResult;
+      projectSlug: string;
+      directorySlug: string;
+      imageSlug: string;
+    }>;
+    total: number;
+  }> {
     // Get current settings to determine fuzzy search threshold
     const appSettings = await this.getSettings();
     
     // Map fuzzy search variations to word_similarity thresholds
-    // 1 char variation: stricter threshold (0.6) - very similar words only
-    // 2 char variation: moderate threshold (0.3) - allows more variations
-    // 3 char variation: looser threshold (0.2) - allows most variations
     const thresholdMap: Record<number, number> = {
       1: 0.6,
       2: 0.3,
@@ -506,8 +513,24 @@ export class DbStorage implements IStorage {
     };
     const threshold = thresholdMap[appSettings.fuzzySearchVariations] || 0.3;
     
-    // Omit imageData from search results for performance, include slugs for routing
-    const results = await db
+    const whereClause = or(
+      ilike(ocrResults.consensusText, `%${query}%`),
+      sql`word_similarity(${query}, ${ocrResults.consensusText}) > ${threshold}`
+    );
+    
+    // Get total count
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(ocrResults)
+      .innerJoin(images, eq(images.id, ocrResults.imageId))
+      .innerJoin(directories, eq(directories.id, images.directoryId))
+      .innerJoin(projects, eq(projects.id, directories.projectId))
+      .where(whereClause);
+    
+    const total = countResult?.count || 0;
+    
+    // Get paginated results
+    let resultsQuery = db
       .select({
         image: {
           id: images.id,
@@ -545,16 +568,8 @@ export class DbStorage implements IStorage {
       .innerJoin(images, eq(images.id, ocrResults.imageId))
       .innerJoin(directories, eq(directories.id, images.directoryId))
       .innerJoin(projects, eq(projects.id, directories.projectId))
-      .where(
-        or(
-          // Exact substring match (case-insensitive)
-          ilike(ocrResults.consensusText, `%${query}%`),
-          // Fuzzy match using word_similarity with dynamic threshold
-          sql`word_similarity(${query}, ${ocrResults.consensusText}) > ${threshold}`
-        )
-      )
+      .where(whereClause)
       .orderBy(
-        // Order by: exact match first, then word similarity, then confidence
         desc(sql`CASE WHEN ${ocrResults.consensusText} ILIKE ${`%${query}%`} THEN 1 ELSE 0 END`),
         desc(sql`word_similarity(${query}, ${ocrResults.consensusText})`),
         desc(
@@ -566,7 +581,17 @@ export class DbStorage implements IStorage {
         )
       );
     
-    return results;
+    if (options?.limit) {
+      resultsQuery = resultsQuery.limit(options.limit) as any;
+    }
+    
+    if (options?.offset) {
+      resultsQuery = resultsQuery.offset(options.offset) as any;
+    }
+    
+    const results = await resultsQuery;
+    
+    return { results, total };
   }
 
   // Monitored Searches

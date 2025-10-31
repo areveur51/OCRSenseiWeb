@@ -34,7 +34,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Projects
   app.get("/api/projects", async (req, res) => {
     try {
-      const projects = await storage.getAllProjects();
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const projects = await storage.getAllProjects(limit);
       
       const projectsWithStats = await Promise.all(
         projects.map(async (project) => {
@@ -701,14 +702,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Search
   app.get("/api/search", async (req, res) => {
     try {
-      const { q } = req.query;
+      const { q, offset, limit } = req.query;
       
       if (!q || typeof q !== "string") {
         return res.status(400).json({ error: "Query parameter 'q' is required" });
       }
       
-      const results = await storage.searchText(q);
-      res.json(results);
+      const options = {
+        offset: offset ? parseInt(offset as string) : undefined,
+        limit: limit ? parseInt(limit as string) : undefined,
+      };
+      
+      const { results, total } = await storage.searchText(q, options);
+      res.json({ results, total });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

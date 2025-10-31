@@ -5,7 +5,8 @@ import { SearchBar } from "@/components/search-bar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, FolderOpen, X, Plus, Eye } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FileText, Calendar, FolderOpen, X, Plus, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Image, OcrResult, MonitoredSearch } from "@shared/schema";
@@ -18,18 +19,27 @@ interface SearchResult {
   imageSlug: string;
 }
 
+interface SearchResponse {
+  results: SearchResult[];
+  total: number;
+}
+
 export default function Search() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const { toast } = useToast();
 
-  const { data: results, isLoading } = useQuery<SearchResult[]>({
-    queryKey: ["/api/search", debouncedQuery],
+  const { data: searchResponse, isLoading } = useQuery<SearchResponse>({
+    queryKey: ["/api/search", debouncedQuery, currentPage, pageSize],
     queryFn: async () => {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`, {
-        credentials: "include",
-      });
+      const offset = (currentPage - 1) * pageSize;
+      const response = await fetch(
+        `/api/search?q=${encodeURIComponent(debouncedQuery)}&offset=${offset}&limit=${pageSize}`,
+        { credentials: "include" }
+      );
       if (!response.ok) {
         throw new Error("Search failed");
       }
@@ -37,6 +47,10 @@ export default function Search() {
     },
     enabled: debouncedQuery.length > 0,
   });
+
+  const results = searchResponse?.results || [];
+  const total = searchResponse?.total || 0;
+  const totalPages = Math.ceil(total / pageSize);
 
   const { data: monitoredSearches = [] } = useQuery<Array<MonitoredSearch & { resultCount: number }>>({
     queryKey: ["/api/monitored-searches"],
@@ -77,7 +91,13 @@ export default function Search() {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
+    setCurrentPage(1); // Reset to page 1 when search changes
     setTimeout(() => setDebouncedQuery(query), 500);
+  };
+
+  const handlePageSizeChange = (newSize: string) => {
+    setPageSize(parseInt(newSize));
+    setCurrentPage(1); // Reset to page 1 when page size changes
   };
 
   const handleMonitoredSearchClick = (searchTerm: string) => {
@@ -179,7 +199,7 @@ export default function Search() {
               Scanning database for "{searchQuery}"_
             </p>
           </div>
-        ) : !results || results.length === 0 ? (
+        ) : !searchResponse || results.length === 0 ? (
           <div className="text-center py-12 space-y-4">
             <pre className="ascii-art text-base text-muted-foreground inline-block">
 {`╔═══╗
@@ -210,10 +230,27 @@ export default function Search() {
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                Found {results.length} result{results.length !== 1 ? 's' : ''} for "{searchQuery}"
-              </p>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-4">
+                <p className="text-sm text-muted-foreground">
+                  Found {total} result{total !== 1 ? 's' : ''} for "{searchQuery}"
+                </p>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+                      <SelectTrigger className="w-24" data-testid="select-search-page-size">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span className="text-sm text-muted-foreground">per page</span>
+                  </div>
+                )}
+              </div>
               {!isCurrentSearchMonitored && debouncedQuery && (
                 <Button
                   size="sm"
@@ -324,6 +361,37 @@ export default function Search() {
                 );
               })}
             </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t pt-4">
+                <p className="text-sm text-muted-foreground">
+                  Showing {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, total)} of {total} results
+                  {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    data-testid="button-search-prev-page"
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    data-testid="button-search-next-page"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
