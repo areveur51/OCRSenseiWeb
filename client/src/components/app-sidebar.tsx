@@ -45,13 +45,13 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 border-b">
         <pre className="ascii-art text-base mb-3">
 {`╔════════════════╗
-║  OCR SYSTEM    ║
+║ OCRSenseiWeb   ║
 ║  ████████████  ║
 ║  ════════════  ║
 ╚════════════════╝`}
         </pre>
         <h2 className="font-semibold text-base">
-          <span className="headline-highlight">OCR EXTRACTOR</span>
+          <span className="headline-highlight">OCRSenseiWeb</span>
         </h2>
       </SidebarHeader>
 

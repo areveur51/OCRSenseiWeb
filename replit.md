@@ -1,7 +1,7 @@
-# OCR Text Extractor - Dual Verification System
+# OCRSenseiWeb - Dual Verification OCR System
 
 ## Overview
-This Matrix-themed OCR application extracts text from scanned images using a dual verification process. It enables users to organize projects into subdirectories, upload and process images, track OCR results with asynchronous batch processing, and search through extracted text. The application's core purpose is to provide an efficient and visually distinct tool for managing and extracting information from digitized documents.
+OCRSenseiWeb is a Matrix-themed OCR application that extracts text from scanned images using a dual verification process. It enables users to organize projects into subdirectories, upload and process images, track OCR results with asynchronous batch processing, and search through extracted text. The application's core purpose is to provide an efficient and visually distinct tool for managing and extracting information from digitized documents.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
