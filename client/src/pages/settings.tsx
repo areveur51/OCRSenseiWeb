@@ -62,13 +62,11 @@ export default function Settings() {
     <div className="space-y-6">
       <div className="flex gap-8">
         <pre className="ascii-art text-xl hidden md:block">
-{`╔════════════════╗
-║   [CONFIG]     ║
-║  ████████████  ║
-║  ════════════  ║
-║  ░░░░░░░░░░░░  ║
-╚════════════════╝
-   [SETTINGS]`}
+{`╔═══════╗
+║ ╔═══╗ ║
+║ ║ ⚙ ║ ║
+║ ╚═══╝ ║
+╚═══════╝`}
         </pre>
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">
@@ -85,9 +83,9 @@ export default function Settings() {
         <Card className="p-6">
           <div className="flex items-start gap-3 mb-6">
             <pre className="ascii-art text-sm opacity-80">
-{`╔════════╗
-║ SEARCH ║
-╚════════╝`}
+{`╔═══╗
+║ ? ║
+╚═══╝`}
             </pre>
             <div>
               <h2 className="text-lg font-semibold">
@@ -204,9 +202,9 @@ export default function Settings() {
         <Card className="p-6">
           <div className="flex items-start gap-3 mb-6">
             <pre className="ascii-art text-sm opacity-80">
-{`╔══════╗
-║ INFO ║
-╚══════╝`}
+{`╔═══╗
+║ ℹ ║
+╚═══╝`}
             </pre>
             <div>
               <h2 className="text-lg font-semibold">

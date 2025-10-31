@@ -157,13 +157,11 @@ export default function ImageDetail() {
       <div className="flex items-start justify-between gap-6 flex-wrap">
         <div className="flex gap-8">
           <pre className="ascii-art text-xl hidden md:block">
-{`╔════════════════╗
-║      SCAN      ║
-║  ████████████  ║
-║  ████████████  ║
-║  ████████████  ║
-╚════════════════╝
-    [OCR]`}
+{`╔═══════╗
+║ ╔═══╗ ║
+║ ║███║ ║
+║ ╚═══╝ ║
+╚═══════╝`}
           </pre>
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">
@@ -226,15 +224,21 @@ export default function ImageDetail() {
 
       {!image ? (
         <div className="text-center py-12 text-muted-foreground">
-          <div className="ascii-art">LOADING...</div>
+          <pre className="ascii-art text-base inline-block">
+{`╔═══╗
+║▓▒░║
+║░▒▓║
+╚═══╝`}
+          </pre>
+          <div className="mt-2">LOADING...</div>
         </div>
       ) : !image.ocrResult ? (
         <div className="text-center py-12 space-y-4">
-          <pre className="ascii-art text-sm text-muted-foreground inline-block">
-{`╔════════════╗
-║  PENDING   ║
-║    ⏸️⏸️    ║
-╚════════════╝`}
+          <pre className="ascii-art text-base text-muted-foreground inline-block">
+{`╔═══╗
+║ ⏸ ║
+║   ║
+╚═══╝`}
           </pre>
           <p className="text-muted-foreground">
             {image.processingStatus === "processing" 

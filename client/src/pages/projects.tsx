@@ -135,13 +135,11 @@ export default function Projects() {
       <div className="flex items-start justify-between gap-6 flex-wrap">
         <div className="flex gap-8">
           <pre className="ascii-art text-xl hidden lg:block">
-{`╔════════════════╗
-║  ████████████  ║
-║  ════════════  ║
-║  ░░░░░░░░░░░░  ║
-║  ▓▓▓▓▓▓▓▓▓▓▓▓  ║
-╚════════════════╝
-  [PROJECTS]`}
+{`╔═══════╗
+║ ╔═══╗ ║
+║ ║▓▓▓║ ║
+║ ╚═══╝ ║
+╚═══════╝`}
           </pre>
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">
@@ -160,15 +158,21 @@ export default function Projects() {
 
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">
-          <div className="ascii-art">LOADING...</div>
+          <pre className="ascii-art text-base inline-block">
+{`╔═══╗
+║▓▒░║
+║░▒▓║
+╚═══╝`}
+          </pre>
+          <div className="mt-2">LOADING...</div>
         </div>
       ) : !projects || projects.length === 0 ? (
         <div className="text-center py-12 space-y-4">
-          <pre className="ascii-art text-sm text-muted-foreground inline-block">
-{`╔════════════╗
-║    ∅∅∅∅    ║
-║  NO DATA   ║
-╚════════════╝`}
+          <pre className="ascii-art text-base text-muted-foreground inline-block">
+{`╔═══╗
+║ ∅ ║
+║   ║
+╚═══╝`}
           </pre>
           <p className="text-muted-foreground">
             No projects yet. Create one to get started!
@@ -192,10 +196,10 @@ export default function Projects() {
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
                     <pre className="ascii-art text-base opacity-90 flex-shrink-0">
-{`╔═══════╗
-║  ▓▓▓  ║
-║  ▓▓▓  ║
-╚═══════╝`}
+{`╔═══╗
+║▓▓▓║
+║▓▓▓║
+╚═══╝`}
                     </pre>
                     <div className="flex-1 min-w-0">
                       <h3

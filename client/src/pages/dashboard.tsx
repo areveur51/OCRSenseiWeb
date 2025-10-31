@@ -135,15 +135,21 @@ export default function Dashboard() {
 
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">
-            <div className="ascii-art">LOADING...</div>
+            <pre className="ascii-art text-base inline-block">
+{`╔═══╗
+║▓▒░║
+║░▒▓║
+╚═══╝`}
+            </pre>
+            <div className="mt-2">LOADING...</div>
           </div>
         ) : filteredProjects.length === 0 ? (
           <div className="text-center py-12 space-y-4">
-            <pre className="ascii-art text-sm text-muted-foreground inline-block">
-{`╔════════════╗
-║    ∅∅∅∅    ║
-║  NO DATA   ║
-╚════════════╝`}
+            <pre className="ascii-art text-base text-muted-foreground inline-block">
+{`╔═══╗
+║ ∅ ║
+║   ║
+╚═══╝`}
             </pre>
             <p className="text-muted-foreground">
               {searchQuery ? "No projects match your search" : "No projects yet. Create one to get started!"}

@@ -288,29 +288,93 @@ export default function ProjectDetail() {
   const processingCount = images?.filter(img => img.processingStatus === "processing").length || 0;
   const pendingCount = images?.filter(img => img.processingStatus === "pending").length || 0;
 
-  // Bold double-line ASCII art variations for subdirectories
+  // 17 Bold double-line ASCII art variations for subdirectories
   const folderAsciiVariations = [
-    `╔═══════════════╗
-║ ▓▓▓▓▓▓▓▓▓▓▓ ║
-║ ▓▓▓▓▓▓▓▓▓▓▓ ║
-║ ▓▓▓▓▓▓▓▓▓▓▓ ║
-║ ▓▓▓▓▓▓▓▓▓▓▓ ║
-╚═══════════════╝
-   [FOLDER]`,
-    `╔═══════════════╗
-║ ███████████ ║
-║ ███████████ ║
-║ ███████████ ║
-║ ███████████ ║
-╚═══════════════╝
-   [FOLDER]`,
-    `╔═══════════════╗
-║ ▒▒▒▒▒▒▒▒▒▒▒ ║
-║ ▒▒▒▒▒▒▒▒▒▒▒ ║
-║ ▒▒▒▒▒▒▒▒▒▒▒ ║
-║ ▒▒▒▒▒▒▒▒▒▒▒ ║
-╚═══════════════╝
-   [FOLDER]`,
+    `╔═══════╗
+║▓▓▓▓▓▓▓║
+║▓▓▓▓▓▓▓║
+║▓▓▓▓▓▓▓║
+╚═══════╝`,
+    `╔═══════╗
+║███████║
+║███████║
+║███████║
+╚═══════╝`,
+    `╔═══════╗
+║▒▒▒▒▒▒▒║
+║▒▒▒▒▒▒▒║
+║▒▒▒▒▒▒▒║
+╚═══════╝`,
+    `╔═══════╗
+║░░░░░░░║
+║███████║
+║███████║
+╚═══════╝`,
+    `╔═══════╗
+║▓▓▓░░░░║
+║▓▓▓░░░░║
+║▓▓▓░░░░║
+╚═══════╝`,
+    `╔═══════╗
+║█▓▒░▒▓█║
+║███████║
+║███████║
+╚═══════╝`,
+    `╔═══════╗
+║▓▓▓▓▓▓▓║
+║▒▒▒▒▒▒▒║
+║░░░░░░░║
+╚═══════╝`,
+    `╔═══════╗
+║░▒▓█▓▒░║
+║░▒▓█▓▒░║
+║░▒▓█▓▒░║
+╚═══════╝`,
+    `╔═══════╗
+║█████░░║
+║█████░░║
+║█████░░║
+╚═══════╝`,
+    `╔═══════╗
+║▓▓▓▓▓▓▓║
+║░░░░░░░║
+║▓▓▓▓▓▓▓║
+╚═══════╝`,
+    `╔═══════╗
+║▒▒▒▒▒▒▒║
+║▓▓▓▓▓▓▓║
+║███████║
+╚═══════╝`,
+    `╔═══════╗
+║█░█░█░█║
+║░█░█░█░║
+║█░█░█░█║
+╚═══════╝`,
+    `╔═══════╗
+║▓▓▓▓███║
+║▓▓▓▓███║
+║▓▓▓▓███║
+╚═══════╝`,
+    `╔═══════╗
+║███▓▓▓▓║
+║███▓▓▓▓║
+║███▓▓▓▓║
+╚═══════╝`,
+    `╔═══════╗
+║▒▒▒███░║
+║▒▒▒███░║
+║▒▒▒███░║
+╚═══════╝`,
+    `╔═══════╗
+║░░█████║
+║░░█████║
+║░░█████║
+╚═══════╝`,
+    `╔═══════╗
+║█▒░░▒█▓║
+║█▒░░▒█▓║
+║█▒░░▒█▓║
+╚═══════╝`,
   ];
 
   // Select ASCII art based on directory ID to ensure consistency
@@ -431,7 +495,13 @@ export default function ProjectDetail() {
               </DialogHeader>
               {uploading ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  <div className="ascii-art">UPLOADING...</div>
+                  <pre className="ascii-art text-base inline-block">
+{`╔═══╗
+║↑↑↑║
+║▓▒░║
+╚═══╝`}
+                  </pre>
+                  <div className="mt-2">UPLOADING...</div>
                 </div>
               ) : (
                 <UploadZone
@@ -450,13 +520,11 @@ export default function ProjectDetail() {
 
       {imagesLoading ? (
         <div className="text-center py-12 space-y-4">
-          <pre className="ascii-art text-sm inline-block">
-{`╔══════════════╗
-║  ▓▒░░░░░▒▓  ║
-║ ▓▒░LOAD░▒▓ ║
-║  ▓▒░ING░▒▓  ║
-║  ▓▒░░░░░▒▓  ║
-╚══════════════╝`}
+          <pre className="ascii-art text-base inline-block">
+{`╔═══╗
+║▓▒░║
+║░▒▓║
+╚═══╝`}
           </pre>
           <p className="text-muted-foreground animate-pulse">
             Loading images...
@@ -464,11 +532,11 @@ export default function ProjectDetail() {
         </div>
       ) : !images || images.length === 0 ? (
         <div className="text-center py-12 space-y-4">
-          <pre className="ascii-art text-sm text-muted-foreground inline-block">
-{`╔════════════╗
-║    ∅∅∅∅    ║
-║  NO DATA   ║
-╚════════════╝`}
+          <pre className="ascii-art text-base text-muted-foreground inline-block">
+{`╔═══╗
+║ ∅ ║
+║   ║
+╚═══╝`}
           </pre>
           <p className="text-muted-foreground">
             No images yet. Upload some to get started!
