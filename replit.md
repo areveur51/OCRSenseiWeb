@@ -22,6 +22,7 @@ OCR processing is managed by a Python-based service using `pytesseract` (Tessera
 
 **Performance Optimizations:**
 - **Smart Image Resizing**: Automatically resizes large images (>2000px width or >3000px height) before OCR processing, reducing processing time by 50-70% while maintaining quality. Uses high-quality Lanczos resampling and maintains aspect ratio.
+- **Intelligent Image Chunking**: Automatically detects extreme dimensions (aspect ratio >5:1 or dimensions exceeding letter-size) and splits images into overlapping letter-size tiles (2550×3300px at 300 DPI with 100px overlap). Each chunk is processed independently through the full dual-verification OCR pipeline, then results are merged with globally-adjusted bounding box coordinates. Prevents processing failures on extremely narrow or tall scanned documents.
 - **Concurrent Tesseract Passes**: Dual PSM configurations execute in parallel, reducing processing time.
 - **Preprocessing Cache**: MD5-hashed cache stores preprocessed images to eliminate redundant OpenCV operations.
 - **Worker Pool**: Configurable concurrent workers (default: 4) process multiple images simultaneously.

@@ -21,6 +21,97 @@ def get_cache_path(image_hash, preprocessing_config):
     cache_hash = hashlib.md5(cache_key.encode()).hexdigest()
     return os.path.join(tempfile.gettempdir(), f"ocr_cache_{cache_hash}.png")
 
+def needs_chunking(width, height, max_chunk_width=2550, max_chunk_height=3300):
+    """
+    Determine if image needs to be chunked based on dimensions
+    
+    Letter size at 300 DPI = 2550x3300 pixels (8.5" x 11")
+    Chunk if:
+    - Either dimension exceeds chunk size
+    - Aspect ratio > 5:1 (very narrow or very tall images)
+    
+    Args:
+        width: Image width in pixels
+        height: Image height in pixels
+        max_chunk_width: Maximum chunk width (default: 2550)
+        max_chunk_height: Maximum chunk height (default: 3300)
+    
+    Returns:
+        Boolean indicating if chunking is needed
+    """
+    aspect_ratio = max(width / height, height / width) if min(width, height) > 0 else 1
+    return (width > max_chunk_width or height > max_chunk_height or aspect_ratio > 5)
+
+def create_image_chunks(image_path, chunk_width=2550, chunk_height=3300, overlap=100):
+    """
+    Split large image into overlapping letter-size chunks for OCR processing
+    
+    Args:
+        image_path: Path to input image
+        chunk_width: Width of each chunk (default: 2550 = 8.5" at 300 DPI)
+        chunk_height: Height of each chunk (default: 3300 = 11" at 300 DPI)
+        overlap: Overlap between chunks in pixels (default: 100)
+    
+    Returns:
+        List of dicts with chunk info: {
+            'image': PIL Image chunk,
+            'x_offset': horizontal offset in original image,
+            'y_offset': vertical offset in original image,
+            'chunk_index': sequential chunk number
+        }
+    """
+    try:
+        img = Image.open(image_path)
+        width, height = img.size
+        
+        chunks = []
+        chunk_index = 0
+        
+        # Calculate step sizes (chunk size minus overlap)
+        x_step = chunk_width - overlap
+        y_step = chunk_height - overlap
+        
+        # Iterate through image creating overlapping chunks
+        y = 0
+        while y < height:
+            x = 0
+            while x < width:
+                # Calculate chunk boundaries
+                x_end = min(x + chunk_width, width)
+                y_end = min(y + chunk_height, height)
+                
+                # Extract chunk
+                chunk_img = img.crop((x, y, x_end, y_end))
+                
+                chunks.append({
+                    'image': chunk_img,
+                    'x_offset': x,
+                    'y_offset': y,
+                    'chunk_index': chunk_index,
+                    'width': x_end - x,
+                    'height': y_end - y
+                })
+                
+                chunk_index += 1
+                
+                # Move to next column
+                x += x_step
+                if x >= width:
+                    break
+            
+            # Move to next row
+            y += y_step
+            if y >= height:
+                break
+        
+        print(f"Image chunking: {width}x{height} → {len(chunks)} chunks ({chunk_width}x{chunk_height} with {overlap}px overlap)", file=sys.stderr)
+        
+        return chunks
+        
+    except Exception as e:
+        print(f"Chunking error: {str(e)}", file=sys.stderr)
+        return []
+
 def smart_resize_image(image_path, max_width=2000, max_height=3000):
     """
     Intelligently resize large images to optimal OCR dimensions
@@ -92,6 +183,8 @@ def preprocess_image(image_path, enable_preprocessing=True, enable_upscale=True,
         return Image.open(image_path)
     
     try:
+        cache_path = None
+        
         # Check cache if enabled
         if enable_cache:
             image_hash = get_image_hash(image_path)
@@ -145,7 +238,7 @@ def preprocess_image(image_path, enable_preprocessing=True, enable_upscale=True,
         processed_img = Image.fromarray(binary)
         
         # Save to cache if enabled
-        if enable_cache:
+        if enable_cache and cache_path:
             try:
                 processed_img.save(cache_path, 'PNG')
             except Exception as cache_error:
@@ -197,9 +290,196 @@ def run_tesseract_pass(img, config_str):
         'confidence': avg_conf
     }
 
+def process_single_chunk(chunk_img, cfg, x_offset=0, y_offset=0):
+    """
+    Process a single image chunk with dual-verification OCR
+    
+    Args:
+        chunk_img: PIL Image to process
+        cfg: Configuration dictionary
+        x_offset: Horizontal offset in original image
+        y_offset: Vertical offset in original image
+    
+    Returns:
+        Dictionary with OCR results and adjusted bounding boxes (maintains dual verification)
+    """
+    temp_chunk_path = None
+    try:
+        # Save chunk to temp file for preprocessing
+        temp_chunk_path = os.path.join(tempfile.gettempdir(), f"chunk_{x_offset}_{y_offset}_{os.getpid()}.png")
+        chunk_img.save(temp_chunk_path)
+        
+        # Preprocess chunk (no smart resize needed - chunks are already letter-sized)
+        processed_img = preprocess_image(
+            temp_chunk_path,
+            enable_preprocessing=cfg['preprocessing'],
+            enable_upscale=cfg['upscale'],
+            enable_denoise=cfg['denoise'],
+            enable_deskew=cfg['deskew'],
+            enable_cache=cfg['enableCache']
+        )
+        
+        # Configuration strings
+        config1_str = f'--oem {cfg["oem"]} --psm {cfg["psm1"]}'
+        run_dual_pass = cfg['psm1'] != cfg['psm2']
+        
+        if run_dual_pass:
+            # Dual verification: Run both passes concurrently
+            config2_str = f'--oem {cfg["oem"]} --psm {cfg["psm2"]}'
+            
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                future1 = executor.submit(run_tesseract_pass, processed_img, config1_str)
+                future2 = executor.submit(run_tesseract_pass, processed_img, config2_str)
+                
+                result1 = future1.result()
+                result2 = future2.result()
+            
+            # Maintain dual verification data
+            pytesseract_text = result1['text'].strip()
+            pytesseract_conf = result1['confidence']
+            easyocr_text = result2['text'].strip()
+            easyocr_conf = result2['confidence']
+            
+            # Choose best result for bounding boxes
+            if pytesseract_conf >= easyocr_conf:
+                best_result = result1
+                consensus_source = "pytesseract_config1"
+                consensus_conf = pytesseract_conf
+            else:
+                best_result = result2
+                consensus_source = "pytesseract_config2"
+                consensus_conf = easyocr_conf
+        else:
+            # Fast mode: Single pass
+            result1 = run_tesseract_pass(processed_img, config1_str)
+            pytesseract_text = result1['text'].strip()
+            pytesseract_conf = result1['confidence']
+            easyocr_text = pytesseract_text
+            easyocr_conf = pytesseract_conf
+            best_result = result1
+            consensus_source = "pytesseract_config1"
+            consensus_conf = pytesseract_conf
+        
+        # Extract bounding boxes and adjust coordinates to global image position
+        bounding_boxes = []
+        n_boxes = len(best_result['data']['text'])
+        for i in range(n_boxes):
+            if int(best_result['data']['conf'][i]) > 0:
+                box = {
+                    'text': best_result['data']['text'][i],
+                    'confidence': int(best_result['data']['conf'][i]),
+                    'x': int(best_result['data']['left'][i]) + x_offset,
+                    'y': int(best_result['data']['top'][i]) + y_offset,
+                    'width': int(best_result['data']['width'][i]),
+                    'height': int(best_result['data']['height'][i])
+                }
+                bounding_boxes.append(box)
+        
+        return {
+            'pytesseract_text': pytesseract_text,
+            'pytesseract_conf': pytesseract_conf,
+            'easyocr_text': easyocr_text,
+            'easyocr_conf': easyocr_conf,
+            'consensus_conf': consensus_conf,
+            'bounding_boxes': bounding_boxes,
+            'source': consensus_source
+        }
+        
+    except Exception as e:
+        print(f"Chunk processing error at ({x_offset}, {y_offset}): {str(e)}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        return {
+            'pytesseract_text': '',
+            'pytesseract_conf': 0,
+            'easyocr_text': '',
+            'easyocr_conf': 0,
+            'consensus_conf': 0,
+            'bounding_boxes': [],
+            'source': 'error'
+        }
+    finally:
+        # Always clean up temp file
+        if temp_chunk_path and os.path.exists(temp_chunk_path):
+            try:
+                os.remove(temp_chunk_path)
+            except Exception as cleanup_error:
+                print(f"Failed to delete chunk temp file: {cleanup_error}", file=sys.stderr)
+
+def merge_chunk_results(chunk_results):
+    """
+    Merge OCR results from multiple chunks while maintaining dual verification
+    
+    Args:
+        chunk_results: List of chunk result dictionaries
+    
+    Returns:
+        Merged result dictionary with dual verification maintained
+    """
+    # Combine results from all chunks
+    pytesseract_parts = []
+    easyocr_parts = []
+    all_bboxes = []
+    pytesseract_conf_sum = 0
+    easyocr_conf_sum = 0
+    consensus_conf_sum = 0
+    valid_chunks = 0
+    
+    for chunk in chunk_results:
+        # Only include chunks that produced text
+        has_pytesseract = chunk.get('pytesseract_text', '').strip()
+        has_easyocr = chunk.get('easyocr_text', '').strip()
+        
+        if has_pytesseract or has_easyocr:
+            if has_pytesseract:
+                pytesseract_parts.append(chunk['pytesseract_text'].strip())
+            if has_easyocr:
+                easyocr_parts.append(chunk['easyocr_text'].strip())
+            
+            # Extend bounding boxes
+            all_bboxes.extend(chunk['bounding_boxes'])
+            
+            # Sum confidences
+            pytesseract_conf_sum += chunk.get('pytesseract_conf', 0)
+            easyocr_conf_sum += chunk.get('easyocr_conf', 0)
+            consensus_conf_sum += chunk.get('consensus_conf', 0)
+            valid_chunks += 1
+    
+    # Calculate average confidences
+    avg_pytesseract_conf = pytesseract_conf_sum // valid_chunks if valid_chunks > 0 else 0
+    avg_easyocr_conf = easyocr_conf_sum // valid_chunks if valid_chunks > 0 else 0
+    avg_consensus_conf = consensus_conf_sum // valid_chunks if valid_chunks > 0 else 0
+    
+    # Combine text with newlines between chunks (preserves reading order)
+    merged_pytesseract = '\n'.join(pytesseract_parts)
+    merged_easyocr = '\n'.join(easyocr_parts)
+    
+    # Determine consensus between merged results
+    if avg_pytesseract_conf >= avg_easyocr_conf:
+        consensus_text = merged_pytesseract
+        consensus_source = "pytesseract_config1"
+    else:
+        consensus_text = merged_easyocr
+        consensus_source = "pytesseract_config2"
+    
+    return {
+        'success': True,
+        'pytesseract_text': merged_pytesseract,
+        'pytesseract_confidence': avg_pytesseract_conf,
+        'easyocr_text': merged_easyocr,
+        'easyocr_confidence': avg_easyocr_conf,
+        'consensus_text': consensus_text,
+        'consensus_source': f'chunked_processing_{consensus_source}',
+        'bounding_boxes': all_bboxes,
+        'chunk_count': valid_chunks
+    }
+
 def process_image(image_path, config=None):
     """
     Process image with pytesseract using two different configurations for dual verification
+    
+    Automatically detects extreme dimensions and chunks large/narrow images into letter-size
+    pieces for optimal OCR processing.
     
     Args:
         image_path: Path to input image
@@ -242,6 +522,50 @@ def process_image(image_path, config=None):
         if 'performancePreset' in cfg and cfg['performancePreset']:
             cfg = apply_performance_preset(cfg, cfg['performancePreset'])
         
+        # Check original image dimensions before resizing
+        orig_img = Image.open(image_path)
+        orig_width, orig_height = orig_img.size
+        orig_img.close()
+        
+        print(f"Original image dimensions: {orig_width}x{orig_height}", file=sys.stderr)
+        
+        # Check if chunking is needed for extreme dimensions
+        if needs_chunking(orig_width, orig_height):
+            # Process using chunking strategy
+            print(f"Extreme dimensions detected ({orig_width}x{orig_height}), using chunking strategy", file=sys.stderr)
+            
+            chunks = create_image_chunks(image_path)
+            if not chunks:
+                # Fallback to normal processing if chunking fails
+                print(f"Chunking failed, falling back to standard processing", file=sys.stderr)
+            else:
+                # Process each chunk
+                chunk_results = []
+                for chunk_info in chunks:
+                    result = process_single_chunk(
+                        chunk_info['image'],
+                        cfg,
+                        chunk_info['x_offset'],
+                        chunk_info['y_offset']
+                    )
+                    chunk_results.append(result)
+                
+                # Merge results (maintains dual verification)
+                merged = merge_chunk_results(chunk_results)
+                
+                # Return with all fields properly populated
+                return {
+                    'success': merged['success'],
+                    'pytesseract_text': merged['pytesseract_text'],
+                    'pytesseract_confidence': merged['pytesseract_confidence'],
+                    'easyocr_text': merged['easyocr_text'],
+                    'easyocr_confidence': merged['easyocr_confidence'],
+                    'consensus_text': merged['consensus_text'],
+                    'consensus_source': merged['consensus_source'],
+                    'bounding_boxes': merged['bounding_boxes']
+                }
+        
+        # Normal processing for standard-sized images
         # Smart resize image before processing (50-70% faster on large images)
         resized_path = smart_resize_image(
             image_path,
