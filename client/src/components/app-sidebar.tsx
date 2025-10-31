@@ -365,14 +365,14 @@ export function AppSidebar() {
                               data-testid={`nav-project-${project.id}`}
                             >
                               <div className="flex items-center gap-2 flex-1">
-                                {editMode && <GripVertical className="h-3 w-3 text-muted-foreground" />}
+                                {editMode && <GripVertical className="h-3 w-3 flex-shrink-0 text-muted-foreground" />}
                                 <ChevronRight
-                                  className={`h-4 w-4 transition-transform ${
+                                  className={`h-4 w-4 flex-shrink-0 transition-transform ${
                                     expandedProjects.has(project.id) ? "rotate-90" : ""
                                   }`}
                                 />
-                                <FolderOpen className="h-4 w-4" />
-                                <span>{project.name}/</span>
+                                <FolderOpen className="h-4 w-4 flex-shrink-0" />
+                                <span className="truncate">{project.name}/</span>
                               </div>
                             </SidebarMenuButton>
                           </div>
@@ -649,7 +649,7 @@ function ProjectDirectories({ projectId, projectSlug, editMode }: { projectId: n
               style={{ paddingLeft: `${indent + 32}px` }}
             >
               <div className="flex items-center gap-2 flex-1">
-                {editMode && <GripVertical className="h-3 w-3 text-muted-foreground" />}
+                {editMode && <GripVertical className="h-3 w-3 flex-shrink-0 text-muted-foreground" />}
                 <FolderOpen className="h-4 w-4 flex-shrink-0" />
                 <span className="truncate">{dir.name}/</span>
               </div>
