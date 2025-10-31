@@ -174,6 +174,19 @@ function ProjectDirectories({ projectId }: { projectId: number }) {
     queryKey: [`/api/projects/${projectId}/directories`],
   });
 
+  // ASCII art variations for subdirectories
+  const directoryAsciiArt = [
+    `╔═╗
+║▓║
+╚═╝`,
+    `╔═╗
+║█║
+╚═╝`,
+    `╔═╗
+║▒║
+╚═╝`,
+  ];
+
   if (!directories || directories.length === 0) {
     return (
       <div className="pl-12 py-1 text-xs text-muted-foreground">
@@ -184,15 +197,19 @@ function ProjectDirectories({ projectId }: { projectId: number }) {
 
   return (
     <div className="pl-8">
-      {directories.map((dir) => (
+      {directories.map((dir, index) => (
         <SidebarMenuItem key={dir.id}>
           <SidebarMenuButton
             onClick={() => setLocation(`/project/${projectId}/${dir.name}`)}
             className="hover-elevate active-elevate-2 text-xs"
             data-testid={`nav-directory-${dir.id}`}
           >
-            <FolderOpen className="h-3 w-3" />
-            <span>{dir.name}/</span>
+            <div className="flex items-center gap-2 flex-1">
+              <pre className="ascii-art text-[0.5rem] leading-tight opacity-80 flex-shrink-0">
+{directoryAsciiArt[index % directoryAsciiArt.length]}
+              </pre>
+              <span className="truncate">{dir.name}/</span>
+            </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
       ))}
