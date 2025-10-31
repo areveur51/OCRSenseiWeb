@@ -109,6 +109,13 @@ export const monitoredSearches = pgTable("monitored_searches", {
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
   fuzzySearchVariations: integer("fuzzy_search_variations").notNull().default(2),
+  ocrEngineMode: integer("ocr_engine_mode").notNull().default(1),
+  ocrPsmConfig1: integer("ocr_psm_config1").notNull().default(6),
+  ocrPsmConfig2: integer("ocr_psm_config2").notNull().default(3),
+  ocrPreprocessing: integer("ocr_preprocessing").notNull().default(1),
+  ocrUpscale: integer("ocr_upscale").notNull().default(1),
+  ocrDenoise: integer("ocr_denoise").notNull().default(1),
+  ocrDeskew: integer("ocr_deskew").notNull().default(1),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
