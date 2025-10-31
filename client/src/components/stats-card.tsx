@@ -13,27 +13,34 @@ interface StatsCardProps {
 }
 
 const iconMap: Record<string, string> = {
-  "Total Projects": `╔═╗
-║▓║
-╚═╝`,
-  "Total Images": `╔═╗
-║▓║
-╚═╝`,
-  "Processed": `╔═╗
-║▓║
-╚═╝`,
-  "Progress": `╔═╗
-║▓║
-╚═╝`,
-  "Images Processed": `╔═╗
-║▓║
-╚═╝`,
-  "Completed": `╔═╗
-║▓║
-╚═╝`,
-  "Avg. Confidence": `╔═╗
-║▓║
-╚═╝`,
+  "Total Projects": `╔═══╗
+║▓▓▓║
+║▓▓▓║
+╚═══╝`,
+  "Total Images": `╔═══╗
+║███║
+║▒▒▒║
+╚═══╝`,
+  "Processed": `╔═══╗
+║ ✓ ║
+║███║
+╚═══╝`,
+  "Progress": `╔═══╗
+║▓▒░║
+║███║
+╚═══╝`,
+  "Images Processed": `╔═══╗
+║███║
+║▒▒▒║
+╚═══╝`,
+  "Completed": `╔═══╗
+║ ✓ ║
+║███║
+╚═══╝`,
+  "Avg. Confidence": `╔═══╗
+║▓▒░║
+║███║
+╚═══╝`,
 };
 
 export function StatsCard({
