@@ -290,18 +290,7 @@ function ProjectDirectories({ projectId, projectSlug, editMode }: { projectId: n
     queryKey: [`/api/p/${projectSlug}/directories`],
   });
 
-  // ASCII art variations for subdirectories
-  const directoryAsciiArt = [
-    `╔═╗
-║▓║
-╚═╝`,
-    `╔═╗
-║█║
-╚═╝`,
-    `╔═╗
-║▒║
-╚═╝`,
-  ];
+  // Removed ASCII art for subdirectories - using icons instead
 
   if (!directories || directories.length === 0) {
     return (
@@ -488,9 +477,7 @@ function ProjectDirectories({ projectId, projectSlug, editMode }: { projectId: n
             >
               <div className="flex items-center gap-2 flex-1">
                 {editMode && <GripVertical className="h-3 w-3 text-muted-foreground" />}
-                <pre className="ascii-art text-[0.5rem] leading-tight opacity-80 flex-shrink-0">
-{directoryAsciiArt[index % directoryAsciiArt.length]}
-                </pre>
+                <FolderOpen className="h-4 w-4 flex-shrink-0" />
                 <span className="truncate">{dir.name}/</span>
               </div>
             </SidebarMenuButton>
