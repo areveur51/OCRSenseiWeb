@@ -563,10 +563,16 @@ function ProjectDirectories({ projectId, projectSlug, editMode }: { projectId: n
       } else {
         // Reorder: swap positions within same parent
         if (draggedDirectory.parentId !== targetDirectory.parentId) {
+          console.log('Reorder validation failed:', {
+            draggedDir: draggedDirectory.name,
+            draggedParentId: draggedDirectory.parentId,
+            targetDir: targetDirectory.name,
+            targetParentId: targetDirectory.parentId,
+          });
           toast({
             variant: "destructive",
             title: "Cannot Reorder",
-            description: "Can only reorder directories at the same level",
+            description: `"${draggedDirectory.name}" and "${targetDirectory.name}" are at different levels`,
           });
           dragContext.setDraggedItem(null);
           setDropTargetDir(null);
