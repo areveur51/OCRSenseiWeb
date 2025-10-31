@@ -288,6 +288,36 @@ export default function ProjectDetail() {
   const processingCount = images?.filter(img => img.processingStatus === "processing").length || 0;
   const pendingCount = images?.filter(img => img.processingStatus === "pending").length || 0;
 
+  // Bold double-line ASCII art variations for subdirectories
+  const folderAsciiVariations = [
+    `╔═══════════════╗
+║ ▓▓▓▓▓▓▓▓▓▓▓ ║
+║ ▓▓▓▓▓▓▓▓▓▓▓ ║
+║ ▓▓▓▓▓▓▓▓▓▓▓ ║
+║ ▓▓▓▓▓▓▓▓▓▓▓ ║
+╚═══════════════╝
+   [FOLDER]`,
+    `╔═══════════════╗
+║ ███████████ ║
+║ ███████████ ║
+║ ███████████ ║
+║ ███████████ ║
+╚═══════════════╝
+   [FOLDER]`,
+    `╔═══════════════╗
+║ ▒▒▒▒▒▒▒▒▒▒▒ ║
+║ ▒▒▒▒▒▒▒▒▒▒▒ ║
+║ ▒▒▒▒▒▒▒▒▒▒▒ ║
+║ ▒▒▒▒▒▒▒▒▒▒▒ ║
+╚═══════════════╝
+   [FOLDER]`,
+  ];
+
+  // Select ASCII art based on directory ID to ensure consistency
+  const folderAscii = currentDirectory 
+    ? folderAsciiVariations[currentDirectory.id % folderAsciiVariations.length]
+    : folderAsciiVariations[0];
+
   return (
     <div className="space-y-6">
       <BreadcrumbNav
@@ -305,13 +335,7 @@ export default function ProjectDetail() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex gap-8">
           <pre className="ascii-art text-xl hidden md:block">
-{`╔═══════════════╗
-║  ███████████  ║
-║  ███████████  ║
-║  ███████████  ║
-║  ███████████  ║
-╚═══════════════╝
-   [FOLDER]`}
+{folderAscii}
           </pre>
           <div>
             <div className="flex items-center gap-2">
