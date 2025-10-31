@@ -31,18 +31,15 @@ export const projects = pgTable("projects", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   description: text("description"),
-  parentProjectId: integer("parent_project_id").references((): any => projects.id, { onDelete: "cascade" }),
-  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => ({
   slugIdx: index("projects_slug_idx").on(table.slug),
-  parentProjectIdIdx: index("projects_parent_project_id_idx").on(table.parentProjectId),
 }));
 
 export const directories = pgTable("directories", {
   id: serial("id").primaryKey(),
-  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   slug: text("slug").notNull(),
   path: text("path").notNull(),

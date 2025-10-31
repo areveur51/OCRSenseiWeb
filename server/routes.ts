@@ -84,8 +84,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: validated.name,
         description: validated.description,
         slug: uniqueSlug,
-        parentProjectId: validated.parentProjectId,
-        sortOrder: validated.sortOrder || 0,
       } as any);
       res.status(201).json(project);
     } catch (error: any) {
@@ -135,64 +133,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/projects/:id/reorder", async (req, res) => {
+  app.post("/api/projects/:id/convert-to-directory", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { sortOrder } = req.body;
+      const { targetProjectId, newParentDirId } = req.body;
       
-      if (typeof sortOrder !== 'number') {
-        return res.status(400).json({ error: "sortOrder must be a number" });
+      if (!targetProjectId) {
+        return res.status(400).json({ error: "targetProjectId is required" });
       }
       
-      const success = await storage.updateProjectOrder(id, sortOrder);
-      
-      if (!success) {
-        return res.status(404).json({ error: "Project not found" });
-      }
-      
-      res.status(200).json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/projects/:id/change-parent", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const { newParentProjectId } = req.body;
-      
-      // Get the project being moved
-      const project = await storage.getProject(id);
-      if (!project) {
-        return res.status(404).json({ error: "Project not found" });
-      }
-
-      // If setting a new parent, validate it
-      if (newParentProjectId !== null) {
-        const newParent = await storage.getProject(newParentProjectId);
-        if (!newParent) {
-          return res.status(400).json({ error: "Parent project not found" });
-        }
-        
-        // Check for circular reference
-        const isDescendant = await storage.isProjectDescendant(newParentProjectId, id);
-        if (isDescendant) {
-          return res.status(400).json({ 
-            error: "Cannot move a project into itself or its descendants" 
-          });
-        }
-      }
-
-      // Update the project's parent
-      const updated = await storage.updateProject(id, { 
-        parentProjectId: newParentProjectId 
-      });
-      
-      if (!updated) {
-        return res.status(404).json({ error: "Project not found" });
-      }
-      
-      res.status(200).json(updated);
+      const newDir = await storage.convertProjectToDirectory(id, targetProjectId, newParentDirId);
+      res.status(200).json(newDir);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

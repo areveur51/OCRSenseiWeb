@@ -33,8 +33,7 @@ export interface IStorage {
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, updates: Partial<InsertProject>): Promise<Project | undefined>;
   deleteProject(id: number): Promise<boolean>;
-  updateProjectOrder(projectId: number, newSortOrder: number): Promise<boolean>;
-  isProjectDescendant(projectId: number, potentialAncestorId: number): Promise<boolean>;
+  convertProjectToDirectory(projectId: number, targetProjectId: number, newParentDirId?: number): Promise<Directory>;
 
   // Directories
   getDirectoriesByProject(projectId: number): Promise<Directory[]>;
@@ -87,7 +86,7 @@ export interface IStorage {
 export class DbStorage implements IStorage {
   // Projects
   async getAllProjects(): Promise<Project[]> {
-    return db.select().from(projects).orderBy(projects.sortOrder, desc(projects.createdAt));
+    return db.select().from(projects).orderBy(desc(projects.createdAt));
   }
 
   async getProject(id: number): Promise<Project | undefined> {
@@ -135,32 +134,58 @@ export class DbStorage implements IStorage {
     return result.rowCount ? result.rowCount > 0 : false;
   }
 
-  async updateProjectOrder(projectId: number, newSortOrder: number): Promise<boolean> {
-    const result = await db
-      .update(projects)
-      .set({ sortOrder: newSortOrder })
-      .where(eq(projects.id, projectId));
-    return result.rowCount ? result.rowCount > 0 : false;
-  }
-
-  async isProjectDescendant(projectId: number, potentialAncestorId: number): Promise<boolean> {
-    // If they're the same project, it's a circular reference
-    if (projectId === potentialAncestorId) {
-      return true;
-    }
-
+  async convertProjectToDirectory(projectId: number, targetProjectId: number, newParentDirId?: number): Promise<Directory> {
     const project = await this.getProject(projectId);
-    if (!project || !project.parentProjectId) {
-      return false;
+    if (!project) {
+      throw new Error("Project not found");
     }
 
-    // Check if immediate parent is the potential ancestor
-    if (project.parentProjectId === potentialAncestorId) {
-      return true;
+    const targetProject = await this.getProject(targetProjectId);
+    if (!targetProject) {
+      throw new Error("Target project not found");
     }
 
-    // Recursively check parent chain
-    return this.isProjectDescendant(project.parentProjectId, potentialAncestorId);
+    // Get all directories in the project being converted
+    const oldDirs = await this.getDirectoriesByProject(projectId);
+
+    // Create a new directory in the target project
+    const { generateSlug } = await import("@shared/slugs");
+    const baseSlug = generateSlug(project.name);
+    const targetDirs = await this.getDirectoriesByProject(targetProjectId);
+    const existingSlugs = targetDirs.map(d => d.slug);
+    const { generateUniqueSlug } = await import("@shared/slugs");
+    const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
+
+    const newPath = newParentDirId 
+      ? `${(await this.getDirectory(newParentDirId))?.path}/${project.name}`
+      : `/${project.name}`;
+
+    const [newDir] = await db.insert(directories).values({
+      projectId: targetProjectId,
+      name: project.name,
+      slug: uniqueSlug,
+      path: newPath,
+      parentId: newParentDirId || null,
+      sortOrder: 0,
+    }).returning();
+
+    // Update all old directories to belong to the target project and be under the new directory
+    for (const oldDir of oldDirs) {
+      const newDirPath = `${newPath}/${oldDir.name}`;
+      await db
+        .update(directories)
+        .set({ 
+          projectId: targetProjectId,
+          parentId: oldDir.parentId ? oldDir.parentId : newDir.id,
+          path: newDirPath
+        })
+        .where(eq(directories.id, oldDir.id));
+    }
+
+    // Delete the old project
+    await this.deleteProject(projectId);
+
+    return newDir;
   }
 
   // Directories
