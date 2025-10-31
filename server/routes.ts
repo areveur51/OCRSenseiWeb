@@ -4,6 +4,7 @@ import multer from "multer";
 import { storage } from "./storage";
 import { fileStorage, createUploadPath, getLegacyUploadPath } from "./file-storage";
 import { ocrProcessor } from "./ocr-processor";
+import { splitImage } from "./image-splitter";
 import {
   insertProjectSchema,
   insertDirectorySchema,
@@ -604,44 +605,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const uploadedImages = [];
       
       for (const file of files) {
-        const fileResult = await fileStorage.saveUploadedFile(
-          file,
-          uploadPath
-        );
-        
-        // Generate slug from original filename (without extension)
-        const filenameWithoutExt = file.originalname.replace(/\.[^.]+$/, '');
-        const baseSlug = generateSlug(filenameWithoutExt);
-        
-        // Get existing slugs in this directory to ensure uniqueness
-        const existingImages = await storage.getImagesByDirectory(directoryId);
-        const existingSlugs = existingImages.map(img => img.slug);
-        const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
-        
-        const image = await storage.createImage({
-          directoryId,
-          filename: fileResult.filename,
-          originalFilename: file.originalname,
-          slug: uniqueSlug,
-          filePath: fileResult.filePath,
-          fileSize: fileResult.fileSize,
-          format: fileResult.format,
-          width: fileResult.width || null,
-          height: fileResult.height || null,
-          sourceType: "upload",
-          sourceUrl: null,
-          imageData: file.buffer,
-        } as any);
-        
-        await storage.createQueueItem({
-          imageId: image.id,
-          status: "pending",
-          priority: 0,
-          attempts: 0,
-          errorMessage: null,
+        // Check if image has extreme dimensions and should be split
+        const splitResult = await splitImage(file.buffer, {
+          max_width: 2550,
+          max_height: 3300,
+          overlap: 100,
+          aspect_ratio_threshold: 5.0,
         });
         
-        uploadedImages.push(image);
+        if (!splitResult.success) {
+          console.error("Image splitting check failed:", splitResult.error);
+          // Fall back to normal upload if splitter fails
+          const fileResult = await fileStorage.saveUploadedFile(file, uploadPath);
+          const filenameWithoutExt = file.originalname.replace(/\.[^.]+$/, '');
+          const baseSlug = generateSlug(filenameWithoutExt);
+          const existingImages = await storage.getImagesByDirectory(directoryId);
+          const existingSlugs = existingImages.map(img => img.slug);
+          const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
+          
+          const image = await storage.createImage({
+            directoryId,
+            filename: fileResult.filename,
+            originalFilename: file.originalname,
+            slug: uniqueSlug,
+            filePath: fileResult.filePath,
+            fileSize: fileResult.fileSize,
+            format: fileResult.format,
+            width: fileResult.width || null,
+            height: fileResult.height || null,
+            sourceType: "upload",
+            sourceUrl: null,
+            imageData: file.buffer,
+          } as any);
+          
+          await storage.createQueueItem({
+            imageId: image.id,
+            status: "pending",
+            priority: 0,
+            attempts: 0,
+            errorMessage: null,
+          });
+          
+          uploadedImages.push(image);
+          continue;
+        }
+        
+        if (splitResult.should_split && splitResult.tiles && splitResult.tiles.length > 0) {
+          // Image has extreme dimensions - split into multiple uploads
+          console.log(`Splitting extreme image: ${file.originalname} (${splitResult.original_dimensions![0]}x${splitResult.original_dimensions![1]}) into ${splitResult.tile_count} tiles`);
+          
+          const filenameWithoutExt = file.originalname.replace(/\.[^.]+$/, '');
+          const baseSlug = generateSlug(filenameWithoutExt);
+          
+          // Get existing slugs once for all tiles
+          const existingImages = await storage.getImagesByDirectory(directoryId);
+          let existingSlugs = existingImages.map(img => img.slug);
+          
+          for (const tile of splitResult.tiles) {
+            // Convert base64 back to buffer
+            const tileBuffer = Buffer.from(tile.data, 'base64');
+            
+            // Create incremented filename
+            const tileName = `${filenameWithoutExt}-${tile.index}`;
+            const tileSlug = generateUniqueSlug(generateSlug(tileName), existingSlugs);
+            existingSlugs.push(tileSlug); // Add to list to prevent duplicates
+            
+            // Save tile as if it were a normal upload
+            const tileFile = {
+              ...file,
+              originalname: `${tileName}.png`,
+              buffer: tileBuffer,
+              size: tileBuffer.length,
+            };
+            
+            const fileResult = await fileStorage.saveUploadedFile(tileFile as any, uploadPath);
+            
+            const image = await storage.createImage({
+              directoryId,
+              filename: fileResult.filename,
+              originalFilename: `${tileName}.png`,
+              slug: tileSlug,
+              filePath: fileResult.filePath,
+              fileSize: fileResult.fileSize,
+              format: 'png',
+              width: tile.dimensions[0],
+              height: tile.dimensions[1],
+              sourceType: "upload",
+              sourceUrl: null,
+              imageData: tileBuffer,
+            } as any);
+            
+            await storage.createQueueItem({
+              imageId: image.id,
+              status: "pending",
+              priority: 0,
+              attempts: 0,
+              errorMessage: null,
+            });
+            
+            uploadedImages.push(image);
+          }
+        } else {
+          // Normal image - upload as-is
+          const fileResult = await fileStorage.saveUploadedFile(file, uploadPath);
+          
+          const filenameWithoutExt = file.originalname.replace(/\.[^.]+$/, '');
+          const baseSlug = generateSlug(filenameWithoutExt);
+          
+          const existingImages = await storage.getImagesByDirectory(directoryId);
+          const existingSlugs = existingImages.map(img => img.slug);
+          const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
+          
+          const image = await storage.createImage({
+            directoryId,
+            filename: fileResult.filename,
+            originalFilename: file.originalname,
+            slug: uniqueSlug,
+            filePath: fileResult.filePath,
+            fileSize: fileResult.fileSize,
+            format: fileResult.format,
+            width: splitResult.original_dimensions?.[0] || null,
+            height: splitResult.original_dimensions?.[1] || null,
+            sourceType: "upload",
+            sourceUrl: null,
+            imageData: file.buffer,
+          } as any);
+          
+          await storage.createQueueItem({
+            imageId: image.id,
+            status: "pending",
+            priority: 0,
+            attempts: 0,
+            errorMessage: null,
+          });
+          
+          uploadedImages.push(image);
+        }
       }
       
       res.status(201).json(uploadedImages);

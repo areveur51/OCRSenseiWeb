@@ -22,10 +22,10 @@ OCR processing is managed by a Python-based service using `pytesseract` (Tessera
 
 **Performance Optimizations:**
 - **Smart Image Resizing**: Automatically resizes large images (>2000px width or >3000px height) before OCR processing, reducing processing time by 50-70% while maintaining quality. Uses high-quality Lanczos resampling and maintains aspect ratio.
-- **Intelligent Image Chunking**: Automatically detects extreme dimensions (aspect ratio >5:1 or dimensions exceeding letter-size) and splits images into overlapping letter-size tiles (2550×3300px at 300 DPI with 100px overlap). Each chunk is processed independently through the full dual-verification OCR pipeline, then results are merged with globally-adjusted bounding box coordinates. Prevents processing failures on extremely narrow or tall scanned documents.
+- **Automatic Image Splitting**: At upload time, extreme-dimension images (aspect ratio >5:1 or dimensions >2550×3300) are automatically split into multiple separate image uploads with incremented names (image-1, image-2, etc.). Each split image appears as a separate item in the gallery and is processed independently. Uses 100px overlap between tiles to prevent word splitting at boundaries.
 - **Concurrent Tesseract Passes**: Dual PSM configurations execute in parallel, reducing processing time.
 - **Preprocessing Cache**: MD5-hashed cache stores preprocessed images to eliminate redundant OpenCV operations.
-- **Worker Pool**: Configurable concurrent workers (default: 4) process multiple images simultaneously.
+- **Worker Pool**: Configurable concurrent workers (default: 4) process multiple images simultaneously with atomic queue locking to prevent race conditions.
 - **Performance Presets**: Three optimization levels (Fast/Balanced/Accurate) balance speed and accuracy. Default: Fast.
 - **Batch Processing**: A single API endpoint processes up to 100 images atomically.
 All OCR parameters are user-configurable via the Settings page and persist to the database. Processing is asynchronous, with images queued and processed by background workers.
