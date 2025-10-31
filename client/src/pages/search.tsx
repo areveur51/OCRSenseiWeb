@@ -235,10 +235,50 @@ export default function Search() {
               {results.map((result) => {
                 const confidence = result.ocrResult.pytesseractConfidence || result.ocrResult.easyocrConfidence || 0;
                 const matchedText = result.ocrResult.consensusText || "";
-                const queryIndex = matchedText.toLowerCase().indexOf(searchQuery.toLowerCase());
-                const contextStart = Math.max(0, queryIndex - 50);
-                const contextEnd = Math.min(matchedText.length, queryIndex + searchQuery.length + 50);
+                
+                // Find the best match position for highlighting
+                const findBestMatch = (text: string, query: string): { start: number; length: number; matchedWord: string } => {
+                  const lowerText = text.toLowerCase();
+                  const lowerQuery = query.toLowerCase();
+                  
+                  // Try exact match first
+                  const exactIndex = lowerText.indexOf(lowerQuery);
+                  if (exactIndex !== -1) {
+                    return { start: exactIndex, length: query.length, matchedWord: text.substring(exactIndex, exactIndex + query.length) };
+                  }
+                  
+                  // For fuzzy matches, try to find each word of the query
+                  const queryWords = query.split(/\s+/).filter(w => w.length > 2);
+                  for (const word of queryWords) {
+                    const wordIndex = lowerText.indexOf(word.toLowerCase());
+                    if (wordIndex !== -1) {
+                      return { start: wordIndex, length: word.length, matchedWord: text.substring(wordIndex, wordIndex + word.length) };
+                    }
+                  }
+                  
+                  // If still no match, try to find words with similar starting characters
+                  const words = text.split(/\s+/);
+                  for (let i = 0; i < words.length; i++) {
+                    const word = words[i];
+                    // Check if word starts similarly to any query word
+                    for (const qWord of queryWords) {
+                      if (word.toLowerCase().startsWith(qWord.toLowerCase().substring(0, Math.min(3, qWord.length)))) {
+                        const wordStart = text.indexOf(word, i === 0 ? 0 : text.indexOf(words[i - 1]) + words[i - 1].length);
+                        return { start: wordStart, length: word.length, matchedWord: word };
+                      }
+                    }
+                  }
+                  
+                  // Fallback: show from beginning
+                  return { start: 0, length: 0, matchedWord: "" };
+                };
+                
+                const match = findBestMatch(matchedText, searchQuery);
+                const contextStart = Math.max(0, match.start - 50);
+                const contextEnd = Math.min(matchedText.length, match.start + match.length + 50);
                 const excerpt = matchedText.substring(contextStart, contextEnd);
+                const highlightStart = match.start - contextStart;
+                const highlightEnd = highlightStart + match.length;
 
                 return (
                   <Card
@@ -274,11 +314,13 @@ export default function Search() {
 
                     <p className="text-sm bg-muted/30 p-3 rounded">
                       {contextStart > 0 && "..."}
-                      {excerpt.substring(0, queryIndex - contextStart)}
-                      <span className="bg-primary/30 font-semibold">
-                        {excerpt.substring(queryIndex - contextStart, queryIndex - contextStart + searchQuery.length)}
-                      </span>
-                      {excerpt.substring(queryIndex - contextStart + searchQuery.length)}
+                      {excerpt.substring(0, highlightStart)}
+                      {match.length > 0 && (
+                        <span className="bg-primary/30 font-semibold">
+                          {excerpt.substring(highlightStart, highlightEnd)}
+                        </span>
+                      )}
+                      {excerpt.substring(highlightEnd)}
                       {contextEnd < matchedText.length && "..."}
                     </p>
                   </Card>
