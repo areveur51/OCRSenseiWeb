@@ -45,6 +45,7 @@ export default function ImageDetail() {
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [newFilename, setNewFilename] = useState("");
+  const [isReprocessing, setIsReprocessing] = useState(false);
 
   const { data: image } = useQuery<ImageWithOcr>({
     queryKey: [`/api/p/${projectSlug}/${dirSlug}/img/${imageSlug}`],
@@ -52,8 +53,9 @@ export default function ImageDetail() {
   });
 
   const handleReprocess = async () => {
-    if (!image?.id) return;
+    if (!image?.id || isReprocessing) return;
 
+    setIsReprocessing(true);
     try {
       await apiRequest("POST", `/api/images/${image.id}/process`);
       queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}/${dirSlug}/img/${imageSlug}`] });
@@ -68,6 +70,8 @@ export default function ImageDetail() {
         title: "Error",
         description: error.message || "Failed to queue image for processing",
       });
+    } finally {
+      setIsReprocessing(false);
     }
   };
 
@@ -185,10 +189,11 @@ export default function ImageDetail() {
           <Button 
             onClick={handleReprocess} 
             variant={image?.ocrResult ? "outline" : "default"}
+            disabled={isReprocessing}
             data-testid="button-process"
           >
             <Play className="h-4 w-4 mr-2" />
-            {image?.ocrResult ? "Reprocess" : "Process Now"}
+            {isReprocessing ? "Queueing..." : image?.ocrResult ? "Reprocess" : "Process Now"}
           </Button>
           {image?.ocrResult && (
             <Button variant="outline" data-testid="button-download">
