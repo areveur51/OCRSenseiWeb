@@ -27,6 +27,7 @@ export function AppSidebar() {
   const [expandedProjects, setExpandedProjects] = useState<Set<number>>(
     new Set()
   );
+  const [editMode, setEditMode] = useState(false);
 
   const { data: projects } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -100,7 +101,26 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Browse/</SidebarGroupLabel>
+          <div className="flex items-center justify-between px-3 py-2">
+            <SidebarGroupLabel>Browse/</SidebarGroupLabel>
+            <button
+              onClick={() => setEditMode(!editMode)}
+              className="text-xs px-2 py-1 rounded hover-elevate active-elevate-2 flex items-center gap-1 font-semibold"
+              data-testid="button-toggle-edit-mode"
+            >
+              {editMode ? (
+                <>
+                  <Save className="h-3 w-3" />
+                  Done
+                </>
+              ) : (
+                <>
+                  <Edit3 className="h-3 w-3" />
+                  Edit
+                </>
+              )}
+            </button>
+          </div>
           <SidebarGroupContent>
             <SidebarMenu>
               {!projects || projects.length === 0 ? (
@@ -127,7 +147,7 @@ export function AppSidebar() {
                     </SidebarMenuItem>
 
                     {expandedProjects.has(project.id) && (
-                      <ProjectDirectories projectId={project.id} projectSlug={project.slug} />
+                      <ProjectDirectories projectId={project.id} projectSlug={project.slug} editMode={editMode} />
                     )}
                   </div>
                 ))
@@ -170,10 +190,9 @@ export function AppSidebar() {
   );
 }
 
-function ProjectDirectories({ projectId, projectSlug }: { projectId: number; projectSlug: string }) {
+function ProjectDirectories({ projectId, projectSlug, editMode }: { projectId: number; projectSlug: string; editMode: boolean }) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [editMode, setEditMode] = useState(false);
   const [draggedDir, setDraggedDir] = useState<number | null>(null);
   const [dropTargetDir, setDropTargetDir] = useState<number | null>(null);
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'inside' | null>(null);
@@ -406,25 +425,6 @@ function ProjectDirectories({ projectId, projectSlug }: { projectId: number; pro
   
   return (
     <div className="pl-8">
-      <div className="px-3 py-2 flex items-center justify-between">
-        <button
-          onClick={() => setEditMode(!editMode)}
-          className="text-xs text-primary hover:underline flex items-center gap-1"
-          data-testid="button-edit-directories"
-        >
-          {editMode ? (
-            <>
-              <Save className="h-3 w-3" />
-              Done
-            </>
-          ) : (
-            <>
-              <Edit3 className="h-3 w-3" />
-              Edit
-            </>
-          )}
-        </button>
-      </div>
       {rootDirectories.map((dir, index) => renderDirectory(dir, 0, index))}
     </div>
   );

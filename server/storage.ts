@@ -472,6 +472,7 @@ export class DbStorage implements IStorage {
       .select({
         image: {
           id: images.id,
+          slug: images.slug,
           directoryId: images.directoryId,
           filename: images.filename,
           originalFilename: images.originalFilename,
@@ -485,7 +486,18 @@ export class DbStorage implements IStorage {
           imageData: sql<null>`NULL`.as('imageData'),
           uploadedAt: images.uploadedAt,
         },
-        ocrResult: ocrResults,
+        ocrResult: {
+          id: ocrResults.id,
+          imageId: ocrResults.imageId,
+          pytesseractText: ocrResults.pytesseractText,
+          pytesseractConfidence: ocrResults.pytesseractConfidence,
+          easyocrText: ocrResults.easyocrText,
+          easyocrConfidence: ocrResults.easyocrConfidence,
+          consensusText: ocrResults.consensusText,
+          consensusSource: ocrResults.consensusSource,
+          boundingBoxes: ocrResults.boundingBoxes,
+          processedAt: ocrResults.processedAt,
+        },
         projectSlug: projects.slug,
         directorySlug: directories.slug,
         imageSlug: images.slug,
