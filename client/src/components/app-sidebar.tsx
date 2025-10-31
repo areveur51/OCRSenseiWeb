@@ -84,29 +84,27 @@ export function AppSidebar() {
     
     if (!draggedItem || !editMode) return;
 
-    // Determine action based on what's being dragged
+    // Only handle project-to-project operations
     if (draggedItem.type === 'project') {
       if (draggedItem.id === targetProject.id) return;
       
-      // Check if dragging over expanded project area
+      // Check if dragging over expanded project's directory area
       const rect = e.currentTarget.getBoundingClientRect();
       const mouseY = e.clientY - rect.top;
       const elementHeight = rect.height;
       
-      // If over an expanded project's middle area, convert to directory
-      // Otherwise, reorder projects
-      if (expandedProjects.has(targetProject.id) && mouseY > elementHeight * 0.3 && mouseY < elementHeight * 0.7) {
+      // More conservative: only trigger convert-to-directory if:
+      // 1. Project is expanded
+      // 2. Mouse is in bottom 40% of the project row (near the expand chevron)
+      if (expandedProjects.has(targetProject.id) && mouseY > elementHeight * 0.6) {
         setDropAction('convert-to-directory');
         setDropTargetId(targetProject.id);
       } else {
         setDropAction('reorder');
         setDropTargetId(targetProject.id);
       }
-    } else if (draggedItem.type === 'directory') {
-      // Directory dropped on project = convert to subdirectory
-      setDropAction('change-parent');
-      setDropTargetId(targetProject.id);
     }
+    // Directories should NOT be droppable on individual projects
   };
 
   const handleProjectDragLeave = () => {
@@ -161,23 +159,8 @@ export function AppSidebar() {
 
         // Expand the target project to show the new directory
         setExpandedProjects(prev => new Set(prev).add(targetProject.id));
-      } else if (draggedItem.type === 'directory' && dropAction === 'change-parent') {
-        // Move directory to be a subdirectory under the project root
-        const targetPath = `${targetProject.name}/${draggedItem.data.name}`;
-        
-        await apiRequest("POST", `/api/directories/${draggedItem.id}/change-parent`, {
-          newParentId: null, // Root of the target project
-          newPath: targetPath,
-        });
-
-        queryClient.invalidateQueries({ queryKey: [`/api/p/${draggedItem.projectSlug}/directories`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/p/${targetProject.slug}/directories`] });
-
-        toast({
-          title: "Directory Moved",
-          description: `"${draggedItem.data.name}" moved to "${targetProject.name}"`,
-        });
       }
+      // Note: Directory drops on projects are NOT handled here - they should only drop in project list area
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -238,8 +221,6 @@ export function AppSidebar() {
       return 'bg-primary/20 border-2 border-primary rounded';
     } else if (dropAction === 'convert-to-directory') {
       return 'bg-blue-500/20 border-2 border-blue-500 rounded';
-    } else if (dropAction === 'change-parent') {
-      return 'bg-purple-500/20 border-2 border-purple-500 rounded';
     }
     return null;
   };
@@ -339,8 +320,16 @@ export function AppSidebar() {
                   setDropAction(null);
                 }
               }}
-              className={dropAction === 'convert-to-project' && dropTargetId === -1 ? 'bg-purple-500/10 border-2 border-purple-500 rounded-md mx-2' : ''}
+              className={`relative ${dropAction === 'convert-to-project' && dropTargetId === -1 ? 'bg-purple-500/10 border-2 border-purple-500 rounded-md mx-2 p-2' : ''}`}
             >
+              {/* Visual indicator for directory→project conversion */}
+              {dropAction === 'convert-to-project' && dropTargetId === -1 && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 bg-purple-500/5 rounded-md">
+                  <div className="text-xs font-semibold text-purple-500 bg-background/90 px-2 py-1 rounded border border-purple-500">
+                    Drop here to promote to project
+                  </div>
+                </div>
+              )}
               <SidebarMenu>
                 {!projects || projects.length === 0 ? (
                   <div className="px-3 py-2 text-xs text-muted-foreground">
@@ -360,8 +349,16 @@ export function AppSidebar() {
                             onDragOver={(e) => handleProjectDragOver(e, project)}
                             onDragLeave={handleProjectDragLeave}
                             onDrop={(e) => handleProjectDrop(e, project)}
-                            className={`${isDragging ? 'opacity-50' : ''} ${editMode ? 'cursor-move' : ''} ${dropIndicator || ''}`}
+                            className={`relative ${isDragging ? 'opacity-50' : ''} ${editMode ? 'cursor-move' : ''} ${dropIndicator || ''}`}
                           >
+                            {/* Visual hint for project→directory conversion */}
+                            {dropAction === 'convert-to-directory' && dropTargetId === project.id && (
+                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                                <div className="text-[0.65rem] font-semibold text-blue-500 bg-background/95 px-2 py-0.5 rounded border border-blue-500 shadow-sm">
+                                  Convert to subdirectory
+                                </div>
+                              </div>
+                            )}
                             <SidebarMenuButton
                               onClick={() => !editMode && toggleProject(project.id)}
                               className="hover-elevate active-elevate-2"
