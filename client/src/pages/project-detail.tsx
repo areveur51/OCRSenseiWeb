@@ -174,17 +174,29 @@ export default function ProjectDetail() {
         });
 
         setUploading(true);
-        await fetch(`/api/directories/${newDir.id}/upload`, {
+        const uploadResponse = await fetch(`/api/directories/${newDir.id}/upload`, {
           method: "POST",
           body: formData,
           credentials: "include",
         });
 
+        if (!uploadResponse.ok) {
+          throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+        }
+
+        const uploadedImages = await uploadResponse.json();
+        const imageCount = uploadedImages.length;
+
         queryClient.invalidateQueries({ queryKey: [`/api/directories/${newDir.id}/images`] });
+        
+        // Check if images were split (more created than uploaded)
+        const wasSplit = imageCount > files.length;
         
         toast({
           title: "Upload Successful",
-          description: `Created directory and uploaded ${files.length} image(s).`,
+          description: wasSplit
+            ? `Created directory and uploaded ${files.length} file(s), split into ${imageCount} letter-size image(s).`
+            : `Created directory and uploaded ${imageCount} image(s).`,
         });
         
         setUploadDialogOpen(false);
@@ -208,17 +220,29 @@ export default function ProjectDetail() {
     });
 
     try {
-      await fetch(`/api/directories/${currentDirectory.id}/upload`, {
+      const response = await fetch(`/api/directories/${currentDirectory.id}/upload`, {
         method: "POST",
         body: formData,
         credentials: "include",
       });
 
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+
+      const uploadedImages = await response.json();
+      const imageCount = uploadedImages.length;
+
       queryClient.invalidateQueries({ queryKey: [`/api/directories/${currentDirectory.id}/images`] });
+      
+      // Check if images were split (more created than uploaded)
+      const wasSplit = imageCount > files.length;
       
       toast({
         title: "Upload Successful",
-        description: `${files.length} image(s) uploaded and queued for processing.`,
+        description: wasSplit 
+          ? `${files.length} file(s) uploaded and split into ${imageCount} letter-size image(s). Queued for OCR processing.`
+          : `${imageCount} image(s) uploaded and queued for processing.`,
       });
       
       setUploadDialogOpen(false);
