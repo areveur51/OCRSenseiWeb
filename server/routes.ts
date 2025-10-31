@@ -316,6 +316,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "newPath must be a string" });
       }
       
+      // Get the directory being moved
+      const directory = await storage.getDirectory(id);
+      if (!directory) {
+        return res.status(404).json({ error: "Directory not found" });
+      }
+
+      // If setting a new parent, validate it
+      if (newParentId !== null) {
+        const newParent = await storage.getDirectory(parseInt(newParentId));
+        if (!newParent) {
+          return res.status(404).json({ error: "Target parent directory not found" });
+        }
+
+        // Ensure both directories are in the same project
+        if (directory.projectId !== newParent.projectId) {
+          return res.status(400).json({ error: "Cannot move directory to a different project" });
+        }
+
+        // Prevent circular dependencies: check if newParent is a descendant of directory
+        const isDescendant = async (parentId: number | null, ancestorId: number): Promise<boolean> => {
+          if (!parentId) return false;
+          if (parentId === ancestorId) return true;
+          const parent = await storage.getDirectory(parentId);
+          return parent ? isDescendant(parent.parentId, ancestorId) : false;
+        };
+
+        if (await isDescendant(parseInt(newParentId), id)) {
+          return res.status(400).json({ error: "Cannot move directory into itself or its descendants" });
+        }
+      }
+      
       const updated = await storage.changeDirectoryParent(
         id, 
         newParentId === null ? null : parseInt(newParentId),
@@ -323,7 +354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       if (!updated) {
-        return res.status(404).json({ error: "Directory not found" });
+        return res.status(404).json({ error: "Failed to update directory" });
       }
       
       res.status(200).json(updated);

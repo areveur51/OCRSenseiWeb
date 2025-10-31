@@ -175,6 +175,8 @@ function ProjectDirectories({ projectId, projectSlug }: { projectId: number; pro
   const { toast } = useToast();
   const [editMode, setEditMode] = useState(false);
   const [draggedDir, setDraggedDir] = useState<number | null>(null);
+  const [dropTargetDir, setDropTargetDir] = useState<number | null>(null);
+  const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'inside' | null>(null);
 
   const { data: directories } = useQuery<Directory[]>({
     queryKey: [`/api/p/${projectSlug}/directories`],
@@ -218,13 +220,38 @@ function ProjectDirectories({ projectId, projectSlug }: { projectId: number; pro
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, targetDirId: number) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    
+    if (!draggedDir || draggedDir === targetDirId) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseY = e.clientY - rect.top;
+    const elementHeight = rect.height;
+    
+    // Determine drop position based on mouse Y position
+    // Top 25%: before, Middle 50%: inside, Bottom 25%: after
+    if (mouseY < elementHeight * 0.25) {
+      setDropPosition('before');
+      setDropTargetDir(targetDirId);
+    } else if (mouseY > elementHeight * 0.75) {
+      setDropPosition('after');
+      setDropTargetDir(targetDirId);
+    } else {
+      setDropPosition('inside');
+      setDropTargetDir(targetDirId);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDropTargetDir(null);
+    setDropPosition(null);
   };
 
   const handleDrop = async (e: React.DragEvent, targetDirId: number) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!draggedDir || draggedDir === targetDirId || !directories) return;
 
     const draggedDirectory = directories.find(d => d.id === draggedDir);
@@ -232,62 +259,118 @@ function ProjectDirectories({ projectId, projectSlug }: { projectId: number; pro
 
     if (!draggedDirectory || !targetDirectory) return;
 
-    // Only allow reordering within the same parent
-    if (draggedDirectory.parentId !== targetDirectory.parentId) {
-      toast({
-        variant: "destructive",
-        title: "Cannot Reorder",
-        description: "Can only reorder directories at the same level",
-      });
-      setDraggedDir(null);
-      return;
-    }
-
-    // Swap sortOrder values
-    const draggedOrder = draggedDirectory.sortOrder ?? 0;
-    const targetOrder = targetDirectory.sortOrder ?? 0;
+    const currentPosition = dropPosition || 'inside';
 
     try {
-      await Promise.all([
-        apiRequest("POST", `/api/directories/${draggedDir}/reorder`, {
-          sortOrder: targetOrder,
-        }),
-        apiRequest("POST", `/api/directories/${targetDirId}/reorder`, {
-          sortOrder: draggedOrder,
-        }),
-      ]);
+      if (currentPosition === 'inside') {
+        // Change parent: move directory into target directory
+        // Prevent moving a directory into itself or its descendants
+        const isDescendant = (parentId: number | null, ancestorId: number): boolean => {
+          if (!parentId) return false;
+          if (parentId === ancestorId) return true;
+          const parent = directories.find(d => d.id === parentId);
+          return parent ? isDescendant(parent.parentId, ancestorId) : false;
+        };
 
-      // Invalidate queries to refresh the list
-      queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}/directories`] });
+        if (isDescendant(targetDirId, draggedDir)) {
+          toast({
+            variant: "destructive",
+            title: "Invalid Move",
+            description: "Cannot move a directory into itself or its descendants",
+          });
+          setDraggedDir(null);
+          setDropTargetDir(null);
+          setDropPosition(null);
+          return;
+        }
 
-      toast({
-        title: "Directories Reordered",
-        description: "Directory order updated successfully",
-      });
+        // Build new path
+        const newPath = `${targetDirectory.path}/${draggedDirectory.name}`;
+        
+        await apiRequest("POST", `/api/directories/${draggedDir}/change-parent`, {
+          newParentId: targetDirId,
+          newPath,
+        });
+
+        queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}/directories`] });
+
+        toast({
+          title: "Directory Moved",
+          description: `Moved "${draggedDirectory.name}" into "${targetDirectory.name}"`,
+        });
+      } else {
+        // Reorder: swap positions within same parent
+        if (draggedDirectory.parentId !== targetDirectory.parentId) {
+          toast({
+            variant: "destructive",
+            title: "Cannot Reorder",
+            description: "Can only reorder directories at the same level",
+          });
+          setDraggedDir(null);
+          setDropTargetDir(null);
+          setDropPosition(null);
+          return;
+        }
+
+        // Swap sortOrder values
+        const draggedOrder = draggedDirectory.sortOrder ?? 0;
+        const targetOrder = targetDirectory.sortOrder ?? 0;
+
+        await Promise.all([
+          apiRequest("POST", `/api/directories/${draggedDir}/reorder`, {
+            sortOrder: targetOrder,
+          }),
+          apiRequest("POST", `/api/directories/${targetDirId}/reorder`, {
+            sortOrder: draggedOrder,
+          }),
+        ]);
+
+        queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}/directories`] });
+
+        toast({
+          title: "Directories Reordered",
+          description: "Directory order updated successfully",
+        });
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Reorder Failed",
-        description: error.message || "Failed to reorder directories",
+        title: "Operation Failed",
+        description: error.message || "Failed to update directories",
       });
     }
 
     setDraggedDir(null);
+    setDropTargetDir(null);
+    setDropPosition(null);
   };
   
   const renderDirectory = (dir: DirectoryNode, level: number, index: number): JSX.Element => {
     const indent = level * 16; // 16px per level
     const isDragging = draggedDir === dir.id;
+    const isDropTarget = dropTargetDir === dir.id;
+    const showDropIndicator = isDropTarget && dropPosition;
 
     return (
-      <div key={dir.id}>
+      <div key={dir.id} className="relative">
+        {/* Drop indicator line - shown before item */}
+        {showDropIndicator && dropPosition === 'before' && (
+          <div 
+            className="absolute left-0 right-0 h-0.5 bg-primary -top-px z-10" 
+            style={{ marginLeft: `${indent + 32}px` }}
+          />
+        )}
+
         <SidebarMenuItem>
           <div
             draggable={editMode}
             onDragStart={(e) => handleDragStart(e, dir.id)}
-            onDragOver={handleDragOver}
+            onDragOver={(e) => handleDragOver(e, dir.id)}
+            onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, dir.id)}
-            className={`${isDragging ? 'opacity-50' : ''} ${editMode ? 'cursor-move' : ''}`}
+            className={`${isDragging ? 'opacity-50' : ''} ${editMode ? 'cursor-move' : ''} ${
+              showDropIndicator && dropPosition === 'inside' ? 'bg-primary/10 rounded' : ''
+            }`}
           >
             <SidebarMenuButton
               onClick={() => !editMode && setLocation(`/p/${projectSlug}/${dir.slug}`)}
@@ -305,6 +388,15 @@ function ProjectDirectories({ projectId, projectSlug }: { projectId: number; pro
             </SidebarMenuButton>
           </div>
         </SidebarMenuItem>
+
+        {/* Drop indicator line - shown after item */}
+        {showDropIndicator && dropPosition === 'after' && (
+          <div 
+            className="absolute left-0 right-0 h-0.5 bg-primary -bottom-px z-10" 
+            style={{ marginLeft: `${indent + 32}px` }}
+          />
+        )}
+
         {dir.children.map((child, childIndex) => renderDirectory(child, level + 1, childIndex))}
       </div>
     );
