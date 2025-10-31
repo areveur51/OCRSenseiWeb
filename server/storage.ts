@@ -33,6 +33,7 @@ export interface IStorage {
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, updates: Partial<InsertProject>): Promise<Project | undefined>;
   deleteProject(id: number): Promise<boolean>;
+  updateProjectOrder(projectId: number, newSortOrder: number): Promise<boolean>;
   convertProjectToDirectory(projectId: number, targetProjectId: number, newParentDirId?: number): Promise<Directory>;
   convertDirectoryToProject(directoryId: number): Promise<Project>;
 
@@ -89,8 +90,8 @@ export interface IStorage {
 export class DbStorage implements IStorage {
   // Projects
   async getAllProjects(limit?: number): Promise<Project[]> {
-    // Order by updatedAt to show most recently updated projects first
-    let query = db.select().from(projects).orderBy(desc(projects.updatedAt));
+    // Order by sortOrder (manual order), then by updatedAt (most recent first)
+    let query = db.select().from(projects).orderBy(projects.sortOrder, desc(projects.updatedAt));
     
     if (limit) {
       query = query.limit(limit) as any;
@@ -141,6 +142,14 @@ export class DbStorage implements IStorage {
 
   async deleteProject(id: number): Promise<boolean> {
     const result = await db.delete(projects).where(eq(projects.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async updateProjectOrder(projectId: number, newSortOrder: number): Promise<boolean> {
+    const result = await db
+      .update(projects)
+      .set({ sortOrder: newSortOrder })
+      .where(eq(projects.id, projectId));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 

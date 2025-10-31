@@ -28,6 +28,9 @@ export function AppSidebar() {
     new Set()
   );
   const [editMode, setEditMode] = useState(false);
+  const [draggedProject, setDraggedProject] = useState<number | null>(null);
+  const [dropTargetProject, setDropTargetProject] = useState<number | null>(null);
+  const { toast } = useToast();
 
   const { data: projects } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -41,6 +44,66 @@ export function AppSidebar() {
       newExpanded.add(projectId);
     }
     setExpandedProjects(newExpanded);
+  };
+
+  const handleDragStart = (e: React.DragEvent, projectId: number) => {
+    setDraggedProject(projectId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetProjectId: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    if (!draggedProject || draggedProject === targetProjectId) return;
+    setDropTargetProject(targetProjectId);
+  };
+
+  const handleDragLeave = () => {
+    setDropTargetProject(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetProjectId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedProject || draggedProject === targetProjectId || !projects) return;
+
+    const draggedProj = projects.find(p => p.id === draggedProject);
+    const targetProj = projects.find(p => p.id === targetProjectId);
+
+    if (!draggedProj || !targetProj) return;
+
+    try {
+      // Swap sortOrder values
+      const draggedOrder = draggedProj.sortOrder ?? 0;
+      const targetOrder = targetProj.sortOrder ?? 0;
+
+      await Promise.all([
+        apiRequest("POST", `/api/projects/${draggedProject}/reorder`, {
+          sortOrder: targetOrder,
+        }),
+        apiRequest("POST", `/api/projects/${targetProjectId}/reorder`, {
+          sortOrder: draggedOrder,
+        }),
+      ]);
+
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+
+      toast({
+        title: "Projects Reordered",
+        description: "Project order updated successfully",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Operation Failed",
+        description: error.message || "Failed to reorder projects",
+      });
+    }
+
+    setDraggedProject(null);
+    setDropTargetProject(null);
   };
 
   return (
@@ -128,29 +191,48 @@ export function AppSidebar() {
                   No projects yet
                 </div>
               ) : (
-                projects.map((project) => (
-                  <div key={project.id}>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        onClick={() => toggleProject(project.id)}
-                        className="hover-elevate active-elevate-2"
-                        data-testid={`nav-project-${project.id}`}
-                      >
-                        <ChevronRight
-                          className={`h-4 w-4 transition-transform ${
-                            expandedProjects.has(project.id) ? "rotate-90" : ""
+                projects.map((project) => {
+                  const isDragging = draggedProject === project.id;
+                  const isDropTarget = dropTargetProject === project.id;
+                  
+                  return (
+                    <div key={project.id}>
+                      <SidebarMenuItem>
+                        <div
+                          draggable={editMode}
+                          onDragStart={(e) => handleDragStart(e, project.id)}
+                          onDragOver={(e) => handleDragOver(e, project.id)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, project.id)}
+                          className={`${isDragging ? 'opacity-50' : ''} ${editMode ? 'cursor-move' : ''} ${
+                            isDropTarget ? 'bg-primary/10 rounded' : ''
                           }`}
-                        />
-                        <FolderOpen className="h-4 w-4" />
-                        <span>{project.name}/</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
+                        >
+                          <SidebarMenuButton
+                            onClick={() => !editMode && toggleProject(project.id)}
+                            className="hover-elevate active-elevate-2"
+                            data-testid={`nav-project-${project.id}`}
+                          >
+                            <div className="flex items-center gap-2 flex-1">
+                              {editMode && <GripVertical className="h-3 w-3 text-muted-foreground" />}
+                              <ChevronRight
+                                className={`h-4 w-4 transition-transform ${
+                                  expandedProjects.has(project.id) ? "rotate-90" : ""
+                                }`}
+                              />
+                              <FolderOpen className="h-4 w-4" />
+                              <span>{project.name}/</span>
+                            </div>
+                          </SidebarMenuButton>
+                        </div>
+                      </SidebarMenuItem>
 
-                    {expandedProjects.has(project.id) && (
-                      <ProjectDirectories projectId={project.id} projectSlug={project.slug} editMode={editMode} />
-                    )}
-                  </div>
-                ))
+                      {expandedProjects.has(project.id) && (
+                        <ProjectDirectories projectId={project.id} projectSlug={project.slug} editMode={editMode} />
+                      )}
+                    </div>
+                  );
+                })
               )}
             </SidebarMenu>
           </SidebarGroupContent>

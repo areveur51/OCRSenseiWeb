@@ -150,6 +150,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/projects/:id/reorder", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { sortOrder } = req.body;
+      
+      if (sortOrder === undefined) {
+        return res.status(400).json({ error: "sortOrder is required" });
+      }
+
+      const success = await storage.updateProjectOrder(id, sortOrder);
+      if (!success) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error reordering project:", error);
+      res.status(500).json({ 
+        error: error.message || "Failed to reorder project" 
+      });
+    }
+  });
+
   // Directories
   app.post("/api/directories/:id/convert-to-project", async (req, res) => {
     try {
