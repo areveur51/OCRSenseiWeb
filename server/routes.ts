@@ -208,6 +208,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Directory name cannot be empty" });
       }
       
+      // Validate projectId
+      if (!validated.projectId) {
+        return res.status(400).json({ error: "Project ID is required" });
+      }
+      
       // Get existing directories in this project
       const existingDirectories = await storage.getDirectoriesByProject(validated.projectId);
       
@@ -269,6 +274,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Check if name actually changed (after normalization)
         if (normalizedName.toLowerCase() !== directory.name.trim().toLowerCase()) {
+          if (!directory.projectId) {
+            return res.status(400).json({ error: "Directory has no associated project" });
+          }
           const existingDirectories = await storage.getDirectoriesByProject(directory.projectId);
           const duplicateAtSameLevel = existingDirectories.find(
             d => d.id !== id && 
@@ -315,6 +323,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!directory) {
         return res.status(404).json({ error: "Directory not found" });
+      }
+      
+      if (!directory.projectId) {
+        return res.status(400).json({ error: "Directory has no associated project" });
       }
       
       const project = await storage.getProject(directory.projectId);
@@ -596,6 +608,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Directory not found" });
       }
       
+      if (!directory.projectId) {
+        return res.status(400).json({ error: "Directory has no associated project" });
+      }
+      
       const project = await storage.getProject(directory.projectId);
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
@@ -762,6 +778,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const directory = await storage.getDirectory(directoryId);
       if (!directory) {
         return res.status(404).json({ error: "Directory not found" });
+      }
+      
+      if (!directory.projectId) {
+        return res.status(400).json({ error: "Directory has no associated project" });
       }
       
       const project = await storage.getProject(directory.projectId);

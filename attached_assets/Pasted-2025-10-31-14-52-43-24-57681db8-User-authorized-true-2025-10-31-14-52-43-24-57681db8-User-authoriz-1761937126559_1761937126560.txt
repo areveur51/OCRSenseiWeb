@@ -1,0 +1,144 @@
+2025-10-31 14:52:43.24
+57681db8
+User
+authorized: true,
+2025-10-31 14:52:43.24
+57681db8
+User
+authorizationError: null,
+2025-10-31 14:52:43.24
+57681db8
+User
+encrypted: true,
+2025-10-31 14:52:43.24
+57681db8
+User
+_events: [Object: null prototype],
+2025-10-31 14:52:43.24
+57681db8
+User
+_eventsCount: 6,
+2025-10-31 14:52:43.24
+57681db8
+User
+connecting: false,
+2025-10-31 14:52:43.24
+57681db8
+User
+_hadError: false,
+2025-10-31 14:52:43.24
+57681db8
+User
+_parent: null,
+2025-10-31 14:52:43.24
+57681db8
+User
+_host: 'ep-still-violet-ahltqqu9.c-3.us-east-1.aws.neon.tech',
+2025-10-31 14:52:43.24
+57681db8
+User
+_closeAfterHandlingError: false,
+2025-10-31 14:52:43.24
+57681db8
+User
+_readableState: [ReadableState],
+2025-10-31 14:52:43.24
+57681db8
+User
+_writableState: [WritableState],
+2025-10-31 14:52:43.24
+57681db8
+User
+allowHalfOpen: false,
+2025-10-31 14:52:43.24
+57681db8
+User
+_maxListeners: undefined,
+2025-10-31 14:52:43.24
+57681db8
+User
+_sockname: null,
+2025-10-31 14:52:43.24
+57681db8
+User
+_pendingData: null,
+2025-10-31 14:52:43.24
+57681db8
+User
+_pendingEncoding: '',
+2025-10-31 14:52:43.24
+57681db8
+User
+server: undefined,
+2025-10-31 14:52:43.24
+57681db8
+User
+_server: null,
+2025-10-31 14:52:43.24
+57681db8
+User
+ssl: [TLSWrap],
+2025-10-31 14:52:43.24
+57681db8
+User
+_requestCert: true,
+2025-10-31 14:52:43.24
+57681db8
+User
+_rejectUnauthorized: true,
+2025-10-31 14:52:43.24
+57681db8
+User
+parser: null,
+2025-10-31 14:52:43.24
+57681db8
+User
+_httpMessage: null,
+2025-10-31 14:52:43.24
+57681db8
+User
+autoSelectFamilyAttemptedAddresses: [Array],
+2025-10-31 14:52:43.24
+57681db8
+User
+timeout: 0,
+2025-10-31 14:52:43.24
+57681db8
+User
+[Symbol(alpncallback)]: null,
+2025-10-31 14:52:43.24
+57681db8
+User
+[Symbol(res)]: [TLSWrap],
+2025-10-31 14:52:43.24
+57681db8
+User
+[Symbol(verified)]: true,
+2025-10-31 14:52:43.24
+57681db8
+User
+[Symbol(pendingSession)]: null,
+2025-10-31 14:52:43.24
+57681db8
+User
+[Symbol(async_id_symbol)]: 7841,
+2025-10-31 14:52:43.24
+57681db8
+User
+[Symbol(kHandle)]: [TLSWrap],
+2025-10-31 14:52:43.24
+57681db8
+User
+[Symbol(lastWriteQueueSize)]: 6,
+2025-10-31 14:52:43.24
+57681db8
+User
+[Symbol(timeout)]: null,
+2025-10-31 14:52:43.24
+57681db8
+User
+[Symbol(kBuffer)]: null,
+2025-10-31 14:52:43.24
+57681db8
+User
+[Symbol(kBufferCb)]: null,
