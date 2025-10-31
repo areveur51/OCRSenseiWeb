@@ -19,13 +19,14 @@ const upload = multer({
     fileSize: 17 * 1024 * 1024, // 17MB
   },
   fileFilter: (req, file, cb) => {
-    const allowedFormats = ["jpg", "jpeg", "png", "tiff", "tif", "pdf"];
+    // Only allow PNG and JPG files for reliable OCR processing
+    const allowedFormats = ["jpg", "jpeg", "png"];
     const ext = file.originalname.split(".").pop()?.toLowerCase();
     
     if (ext && allowedFormats.includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error("Invalid file format. Allowed: JPG, PNG, TIFF, PDF"));
+      cb(new Error("Invalid file format. Only PNG and JPG files are allowed."));
     }
   },
 });

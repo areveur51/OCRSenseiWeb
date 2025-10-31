@@ -68,27 +68,31 @@ export class OcrProcessor {
       // Ensure we have a proper Buffer for writing
       // Neon serverless may return Uint8Array or JSON representation of Buffer
       let bufferData: Buffer;
-      if (Buffer.isBuffer(image.imageData)) {
-        bufferData = image.imageData;
-      } else if (image.imageData instanceof Uint8Array) {
-        bufferData = Buffer.from(image.imageData);
-      } else if (typeof image.imageData === 'object' && image.imageData.type === 'Buffer' && Array.isArray(image.imageData.data)) {
+      const imageData: any = image.imageData; // Type assertion for complex type checking
+      
+      if (Buffer.isBuffer(imageData)) {
+        bufferData = imageData;
+      } else if (imageData instanceof Uint8Array) {
+        bufferData = Buffer.from(imageData);
+      } else if (typeof imageData === 'object' && imageData !== null && imageData.type === 'Buffer' && Array.isArray(imageData.data)) {
         // Neon returns bytea as {type: 'Buffer', data: [bytes...]}
-        bufferData = Buffer.from(image.imageData.data);
-      } else if (typeof image.imageData === 'string') {
+        bufferData = Buffer.from(imageData.data);
+      } else if (typeof imageData === 'string') {
         // Base64 encoded
-        bufferData = Buffer.from(image.imageData, 'base64');
-      } else if (Array.isArray(image.imageData)) {
-        bufferData = Buffer.from(image.imageData);
+        bufferData = Buffer.from(imageData, 'base64');
+      } else if (Array.isArray(imageData)) {
+        bufferData = Buffer.from(imageData);
       } else {
-        throw new Error(`Unexpected imageData type: ${typeof image.imageData}, value: ${JSON.stringify(image.imageData).slice(0, 200)}`);
+        throw new Error(`Unexpected imageData type: ${typeof imageData}, value: ${JSON.stringify(imageData).slice(0, 200)}`);
       }
       
       fs.writeFileSync(imagePath, bufferData);
       tempFile = true;
-    } else {
+    } else if (image.filePath) {
       // Image is in filesystem (legacy)
       imagePath = fileStorage.getFilePath(image.filePath);
+    } else {
+      throw new Error(`Image ${imageId} has no imageData or filePath`);
     }
 
     const pythonScript = path.join(process.cwd(), "server", "ocr-service.py");
