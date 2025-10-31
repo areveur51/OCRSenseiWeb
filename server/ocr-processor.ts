@@ -49,6 +49,8 @@ export class OcrProcessor {
       deskew: settings.ocrDeskew === 1,
       performancePreset: settings.ocrPerformancePreset || 'balanced',
       enableCache: settings.ocrEnableCache === 1,
+      maxWidth: settings.ocrMaxWidth || 2000,
+      maxHeight: settings.ocrMaxHeight || 3000,
     };
 
     let imagePath: string;

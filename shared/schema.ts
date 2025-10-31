@@ -121,6 +121,8 @@ export const settings = pgTable("settings", {
   ocrPerformancePreset: text("ocr_performance_preset").notNull().default("balanced"),
   ocrWorkerCount: integer("ocr_worker_count").notNull().default(2),
   ocrEnableCache: integer("ocr_enable_cache").notNull().default(1),
+  ocrMaxWidth: integer("ocr_max_width").notNull().default(2000),
+  ocrMaxHeight: integer("ocr_max_height").notNull().default(3000),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
@@ -189,6 +191,8 @@ export const updateSettingsSchema = z.object({
   ocrPerformancePreset: z.enum(["fast", "balanced", "accurate"]).optional(),
   ocrWorkerCount: z.number().int().min(1).max(8).optional(),
   ocrEnableCache: z.number().int().min(0).max(1).optional(),
+  ocrMaxWidth: z.number().int().min(500).max(5000).optional(),
+  ocrMaxHeight: z.number().int().min(500).max(8000).optional(),
 });
 
 // Select types
