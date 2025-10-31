@@ -13,6 +13,9 @@ import type { Image, OcrResult, MonitoredSearch } from "@shared/schema";
 interface SearchResult {
   image: Image;
   ocrResult: OcrResult;
+  projectSlug: string;
+  directorySlug: string;
+  imageSlug: string;
 }
 
 export default function Search() {
@@ -278,7 +281,7 @@ export default function Search() {
                   <Card
                     key={result.image.id}
                     className="p-6 hover-elevate active-elevate-2 cursor-pointer"
-                    onClick={() => setLocation(`/image/${result.image.id}`)}
+                    onClick={() => setLocation(`/p/${result.projectSlug}/${result.directorySlug}/img/${result.imageSlug}`)}
                     data-testid={`search-result-${result.image.id}`}
                   >
                     <div className="flex items-start justify-between gap-4 mb-3">

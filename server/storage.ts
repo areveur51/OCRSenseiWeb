@@ -446,7 +446,13 @@ export class DbStorage implements IStorage {
   }
 
   // Search
-  async searchText(query: string): Promise<Array<{ image: Image; ocrResult: OcrResult }>> {
+  async searchText(query: string): Promise<Array<{ 
+    image: Image; 
+    ocrResult: OcrResult;
+    projectSlug: string;
+    directorySlug: string;
+    imageSlug: string;
+  }>> {
     // Get current settings to determine fuzzy search threshold
     const appSettings = await this.getSettings();
     
@@ -461,7 +467,7 @@ export class DbStorage implements IStorage {
     };
     const threshold = thresholdMap[appSettings.fuzzySearchVariations] || 0.3;
     
-    // Omit imageData from search results for performance
+    // Omit imageData from search results for performance, include slugs for routing
     const results = await db
       .select({
         image: {
@@ -480,9 +486,14 @@ export class DbStorage implements IStorage {
           uploadedAt: images.uploadedAt,
         },
         ocrResult: ocrResults,
+        projectSlug: projects.slug,
+        directorySlug: directories.slug,
+        imageSlug: images.slug,
       })
       .from(ocrResults)
       .innerJoin(images, eq(images.id, ocrResults.imageId))
+      .innerJoin(directories, eq(directories.id, images.directoryId))
+      .innerJoin(projects, eq(projects.id, directories.projectId))
       .where(
         or(
           // Exact substring match (case-insensitive)
