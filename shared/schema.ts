@@ -29,20 +29,25 @@ const bytea = customType<{ data: Buffer }>({
 export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
   description: text("description"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  slugIdx: index("projects_slug_idx").on(table.slug),
+}));
 
 export const directories = pgTable("directories", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  slug: text("slug").notNull(),
   path: text("path").notNull(),
   parentId: integer("parent_id").references((): any => directories.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   projectIdIdx: index("directories_project_id_idx").on(table.projectId),
+  slugIdx: index("directories_slug_idx").on(table.projectId, table.slug),
 }));
 
 export const images = pgTable("images", {
@@ -50,6 +55,7 @@ export const images = pgTable("images", {
   directoryId: integer("directory_id").notNull().references(() => directories.id, { onDelete: "cascade" }),
   filename: text("filename").notNull(),
   originalFilename: text("original_filename").notNull(),
+  slug: text("slug").notNull(),
   filePath: text("file_path"),
   fileSize: integer("file_size").notNull(),
   format: text("format").notNull(),
@@ -61,6 +67,7 @@ export const images = pgTable("images", {
   uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
 }, (table) => ({
   directoryIdIdx: index("images_directory_id_idx").on(table.directoryId),
+  slugIdx: index("images_slug_idx").on(table.directoryId, table.slug),
 }));
 
 export const ocrResults = pgTable("ocr_results", {
@@ -110,16 +117,22 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  slug: z.string().optional(),
 });
 
 export const insertDirectorySchema = createInsertSchema(directories).omit({
   id: true,
   createdAt: true,
+}).extend({
+  slug: z.string().optional(),
 });
 
 export const insertImageSchema = createInsertSchema(images).omit({
   id: true,
   uploadedAt: true,
+}).extend({
+  slug: z.string().optional(),
 }).refine(
   (data) => !data.imageData || Buffer.isBuffer(data.imageData),
   {

@@ -11,6 +11,7 @@ import {
   insertMonitoredSearchSchema,
   updateSettingsSchema,
 } from "@shared/schema";
+import { generateSlug, generateUniqueSlug } from "@shared/slugs";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -70,7 +71,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/projects", async (req, res) => {
     try {
       const validated = insertProjectSchema.parse(req.body);
-      const project = await storage.createProject(validated);
+      
+      // Generate slug from project name
+      const baseSlug = generateSlug(validated.name);
+      
+      // Get existing project slugs to ensure uniqueness
+      const existingProjects = await storage.getAllProjects();
+      const existingSlugs = existingProjects.map(p => p.slug);
+      const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
+      
+      const project = await storage.createProject({
+        ...validated,
+        slug: uniqueSlug,
+      });
       res.status(201).json(project);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -133,7 +146,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/directories", async (req, res) => {
     try {
       const validated = insertDirectorySchema.parse(req.body);
-      const directory = await storage.createDirectory(validated);
+      
+      // Generate slug from directory name
+      const baseSlug = generateSlug(validated.name);
+      
+      // Get existing directory slugs in this project to ensure uniqueness
+      const existingDirectories = await storage.getDirectoriesByProject(validated.projectId);
+      const existingSlugs = existingDirectories.map(d => d.slug);
+      const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
+      
+      const directory = await storage.createDirectory({
+        ...validated,
+        slug: uniqueSlug,
+      });
       res.status(201).json(directory);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -332,10 +357,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           uploadPath
         );
         
+        // Generate slug from original filename (without extension)
+        const filenameWithoutExt = file.originalname.replace(/\.[^.]+$/, '');
+        const baseSlug = generateSlug(filenameWithoutExt);
+        
+        // Get existing slugs in this directory to ensure uniqueness
+        const existingImages = await storage.getImagesByDirectory(directoryId);
+        const existingSlugs = existingImages.map(img => img.slug);
+        const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
+        
         const image = await storage.createImage({
           directoryId,
           filename: fileResult.filename,
           originalFilename: file.originalname,
+          slug: uniqueSlug,
           filePath: fileResult.filePath,
           fileSize: fileResult.fileSize,
           format: fileResult.format,
@@ -389,10 +424,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         uploadPath
       );
       
+      // Generate slug from downloaded filename (without extension)
+      const filenameWithoutExt = fileResult.filename.replace(/\.[^.]+$/, '');
+      const baseSlug = generateSlug(filenameWithoutExt);
+      
+      // Get existing slugs in this directory to ensure uniqueness
+      const existingImages = await storage.getImagesByDirectory(directoryId);
+      const existingSlugs = existingImages.map(img => img.slug);
+      const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
+      
       const image = await storage.createImage({
         directoryId,
         filename: fileResult.filename,
         originalFilename: fileResult.filename,
+        slug: uniqueSlug,
         filePath: fileResult.filePath,
         fileSize: fileResult.fileSize,
         format: fileResult.format,

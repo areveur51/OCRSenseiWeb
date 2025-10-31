@@ -28,6 +28,7 @@ export interface IStorage {
   // Projects
   getAllProjects(): Promise<Project[]>;
   getProject(id: number): Promise<Project | undefined>;
+  getProjectBySlug(slug: string): Promise<Project | undefined>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, updates: Partial<InsertProject>): Promise<Project | undefined>;
   deleteProject(id: number): Promise<boolean>;
@@ -35,6 +36,7 @@ export interface IStorage {
   // Directories
   getDirectoriesByProject(projectId: number): Promise<Directory[]>;
   getDirectory(id: number): Promise<Directory | undefined>;
+  getDirectoryBySlug(projectId: number, slug: string): Promise<Directory | undefined>;
   createDirectory(directory: InsertDirectory): Promise<Directory>;
   updateDirectory(id: number, updates: Partial<InsertDirectory>): Promise<Directory | undefined>;
   deleteDirectory(id: number): Promise<boolean>;
@@ -42,6 +44,7 @@ export interface IStorage {
   // Images
   getImagesByDirectory(directoryId: number): Promise<Image[]>;
   getImage(id: number): Promise<Image | undefined>;
+  getImageBySlug(directoryId: number, slug: string): Promise<Image | undefined>;
   createImage(image: InsertImage): Promise<Image>;
   updateImage(id: number, updates: Partial<InsertImage>): Promise<Image | undefined>;
   deleteImage(id: number): Promise<boolean>;
@@ -88,6 +91,11 @@ export class DbStorage implements IStorage {
     return project;
   }
 
+  async getProjectBySlug(slug: string): Promise<Project | undefined> {
+    const [project] = await db.select().from(projects).where(eq(projects.slug, slug));
+    return project;
+  }
+
   async createProject(project: InsertProject): Promise<Project> {
     const [newProject] = await db.insert(projects).values(project).returning();
     return newProject;
@@ -114,6 +122,14 @@ export class DbStorage implements IStorage {
 
   async getDirectory(id: number): Promise<Directory | undefined> {
     const [directory] = await db.select().from(directories).where(eq(directories.id, id));
+    return directory;
+  }
+
+  async getDirectoryBySlug(projectId: number, slug: string): Promise<Directory | undefined> {
+    const [directory] = await db
+      .select()
+      .from(directories)
+      .where(and(eq(directories.projectId, projectId), eq(directories.slug, slug)));
     return directory;
   }
 
@@ -144,6 +160,7 @@ export class DbStorage implements IStorage {
       directoryId: images.directoryId,
       filename: images.filename,
       originalFilename: images.originalFilename,
+      slug: images.slug,
       filePath: images.filePath,
       fileSize: images.fileSize,
       format: images.format,
@@ -158,6 +175,14 @@ export class DbStorage implements IStorage {
 
   async getImage(id: number): Promise<Image | undefined> {
     const [image] = await db.select().from(images).where(eq(images.id, id));
+    return image;
+  }
+
+  async getImageBySlug(directoryId: number, slug: string): Promise<Image | undefined> {
+    const [image] = await db
+      .select()
+      .from(images)
+      .where(and(eq(images.directoryId, directoryId), eq(images.slug, slug)));
     return image;
   }
 
