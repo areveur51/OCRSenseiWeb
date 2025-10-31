@@ -20,7 +20,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/projects" component={Projects} />
-      <Route path="/project/:id/:subdir" component={ProjectDetail} />
+      <Route path="/project/:id/dir/:dirId" component={ProjectDetail} />
       <Route path="/project/:id" component={ProjectDetail} />
       <Route path="/image/:id" component={ImageDetail} />
       <Route path="/search" component={Search} />

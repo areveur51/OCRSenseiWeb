@@ -196,14 +196,28 @@ function ProjectDirectories({ projectId }: { projectId: number }) {
     );
   }
 
-  return (
-    <div className="pl-8">
-      {directories.map((dir, index) => (
-        <SidebarMenuItem key={dir.id}>
+  // Build a tree structure for nested directories
+  type DirectoryNode = Directory & { children: DirectoryNode[] };
+  
+  const buildTree = (parentId: number | null = null, level = 0): DirectoryNode[] => {
+    return directories
+      .filter(dir => dir.parentId === parentId)
+      .map(dir => ({
+        ...dir,
+        children: buildTree(dir.id, level + 1)
+      }));
+  };
+  
+  const renderDirectory = (dir: DirectoryNode, level: number, index: number): JSX.Element => {
+    const indent = level * 16; // 16px per level
+    return (
+      <div key={dir.id}>
+        <SidebarMenuItem>
           <SidebarMenuButton
-            onClick={() => setLocation(`/project/${projectId}/${dir.name}`)}
+            onClick={() => setLocation(`/project/${projectId}/dir/${dir.id}`)}
             className="hover-elevate active-elevate-2 text-xs"
             data-testid={`nav-directory-${dir.id}`}
+            style={{ paddingLeft: `${indent + 32}px` }}
           >
             <div className="flex items-center gap-2 flex-1">
               <pre className="ascii-art text-[0.5rem] leading-tight opacity-80 flex-shrink-0">
@@ -213,7 +227,16 @@ function ProjectDirectories({ projectId }: { projectId: number }) {
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
-      ))}
+        {dir.children.map((child, childIndex) => renderDirectory(child, level + 1, childIndex))}
+      </div>
+    );
+  };
+
+  const rootDirectories = buildTree();
+  
+  return (
+    <div className="pl-8">
+      {rootDirectories.map((dir, index) => renderDirectory(dir, 0, index))}
     </div>
   );
 }

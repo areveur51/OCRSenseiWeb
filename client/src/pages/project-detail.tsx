@@ -51,7 +51,7 @@ interface ImageWithOcr extends Image {
 export default function ProjectDetail() {
   const params = useParams();
   const projectId = params.id ? parseInt(params.id) : null;
-  const directoryParam = params.subdir || "root";
+  const dirId = params.dirId ? parseInt(params.dirId) : null;
   
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -74,7 +74,26 @@ export default function ProjectDetail() {
     enabled: !!projectId,
   });
 
-  const currentDirectory = directories?.find(d => d.name === directoryParam) || directories?.[0];
+  // Find current directory by ID, or use root directory (parentId is null)
+  const currentDirectory = dirId 
+    ? directories?.find(d => d.id === dirId)
+    : directories?.find(d => d.parentId === null);
+  
+  // Helper function to build directory path hierarchy for breadcrumbs
+  const getDirectoryPath = (dir: Directory | undefined): Directory[] => {
+    if (!dir || !directories) return [];
+    const path: Directory[] = [dir];
+    let current = dir;
+    while (current.parentId) {
+      const parent = directories.find(d => d.id === current.parentId);
+      if (!parent) break;
+      path.unshift(parent);
+      current = parent;
+    }
+    return path;
+  };
+  
+  const directoryPath = getDirectoryPath(currentDirectory);
 
   const { data: images, isLoading: imagesLoading } = useQuery<ImageWithOcr[]>({
     queryKey: [`/api/directories/${currentDirectory?.id}/images`],
@@ -179,18 +198,24 @@ export default function ProjectDetail() {
     if (!projectId || !newDirName.trim()) return;
 
     try {
+      // Build the path based on current directory
+      const parentPath = currentDirectory && currentDirectory.name !== "root" 
+        ? currentDirectory.path 
+        : "";
+      const newPath = `${parentPath}/${newDirName.trim()}`;
+      
       await apiRequest("POST", "/api/directories", {
         projectId,
         name: newDirName.trim(),
-        path: `/${newDirName.trim()}`,
-        parentId: null,
+        path: newPath,
+        parentId: currentDirectory && currentDirectory.name !== "root" ? currentDirectory.id : null,
       });
 
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/directories`] });
       
       toast({
         title: "Directory Created",
-        description: `Directory "${newDirName.trim()}" has been created.`,
+        description: `Subdirectory "${newDirName.trim()}" has been created${currentDirectory && currentDirectory.name !== "root" ? ` in "${currentDirectory.name}"` : ""}.`,
       });
       
       setCreateDirDialogOpen(false);
@@ -232,12 +257,19 @@ export default function ProjectDetail() {
   };
 
   const handleRenameDirectory = async () => {
-    if (!currentDirectory || !renameDirValue.trim() || currentDirectory.name === "root") return;
+    if (!currentDirectory || !renameDirValue.trim() || !currentDirectory.parentId) return;
 
     try {
+      // Build new path based on parent
+      const parentDir = currentDirectory.parentId 
+        ? directories?.find(d => d.id === currentDirectory.parentId) 
+        : null;
+      const parentPath = parentDir ? parentDir.path : "";
+      const newPath = `${parentPath}/${renameDirValue.trim()}`;
+      
       const response = await apiRequest("PATCH", `/api/directories/${currentDirectory.id}`, {
         name: renameDirValue.trim(),
-        path: `/${renameDirValue.trim()}`,
+        path: newPath,
       });
       await response.json();
 
@@ -250,7 +282,6 @@ export default function ProjectDetail() {
       
       setRenameDirDialogOpen(false);
       setRenameDirValue("");
-      setLocation(`/project/${projectId}/${renameDirValue.trim()}`);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -261,7 +292,7 @@ export default function ProjectDetail() {
   };
 
   const handleDeleteDirectory = async () => {
-    if (!currentDirectory || currentDirectory.name === "root") return;
+    if (!currentDirectory || !currentDirectory.parentId) return;
 
     try {
       await apiRequest("DELETE", `/api/directories/${currentDirectory.id}`);
@@ -274,7 +305,12 @@ export default function ProjectDetail() {
       });
       
       setDeleteDirDialogOpen(false);
-      setLocation(`/project/${projectId}/root`);
+      // Navigate to parent directory
+      if (currentDirectory.parentId) {
+        setLocation(`/project/${projectId}/dir/${currentDirectory.parentId}`);
+      } else {
+        setLocation(`/project/${projectId}`);
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -387,11 +423,11 @@ export default function ProjectDetail() {
       <BreadcrumbNav
         items={[
           { label: "Dashboard", href: "/" },
-          { label: project?.name || "Project", href: `/project/${projectId}/root` },
-          ...(currentDirectory && currentDirectory.name !== "root" 
-            ? [{ label: currentDirectory.name }] 
-            : []
-          ),
+          { label: project?.name || "Project", href: `/project/${projectId}` },
+          ...directoryPath.map((dir, index) => ({
+            label: dir.name,
+            href: index < directoryPath.length - 1 ? `/project/${projectId}/dir/${dir.id}` : undefined
+          })),
         ]}
         onNavigate={(href) => setLocation(href)}
       />
@@ -405,10 +441,10 @@ export default function ProjectDetail() {
             <div className="flex items-center gap-2">
               <h1 className="text-3xl font-semibold tracking-tight">
                 <span className="headline-highlight">
-                  {project?.name} {currentDirectory && currentDirectory.name !== "root" ? ` / ${currentDirectory.name}` : ""}
+                  {project?.name} {directoryPath.length > 0 ? ` / ${directoryPath.map(d => d.name).join(' / ')}` : ""}
                 </span>
               </h1>
-              {currentDirectory && currentDirectory.name !== "root" && (
+              {currentDirectory && currentDirectory.parentId && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" data-testid="button-directory-menu">
@@ -451,9 +487,9 @@ export default function ProjectDetail() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create Directory</DialogTitle>
+                <DialogTitle>Create Subdirectory</DialogTitle>
                 <DialogDescription>
-                  Create a new subdirectory for organizing images
+                  Create a new subdirectory{currentDirectory ? ` in "${currentDirectory.name}"` : ""} for organizing images
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
