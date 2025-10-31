@@ -211,6 +211,23 @@ export default function ProjectDetail() {
     try {
       // Find the selected parent directory to build the path
       const parentDir = newDirParentId ? directories?.find(d => d.id === newDirParentId) : null;
+      
+      // Check for duplicate names at the same level
+      const duplicateAtSameLevel = directories?.find(
+        d => d.name.toLowerCase() === newDirName.trim().toLowerCase() && 
+             d.parentId === newDirParentId
+      );
+      
+      if (duplicateAtSameLevel) {
+        const parentName = parentDir ? parentDir.name : "root level";
+        toast({
+          variant: "destructive",
+          title: "Duplicate Name",
+          description: `A directory named "${newDirName.trim()}" already exists at ${parentName}`,
+        });
+        return;
+      }
+      
       const parentPath = parentDir ? parentDir.path : "";
       const newPath = `${parentPath}/${newDirName.trim()}`;
       
@@ -281,6 +298,24 @@ export default function ProjectDetail() {
     }
 
     try {
+      // Check for duplicate names at the same level (excluding current directory)
+      const duplicateAtSameLevel = directories?.find(
+        d => d.id !== currentDirectory.id && 
+             d.name.toLowerCase() === renameDirValue.trim().toLowerCase() && 
+             d.parentId === currentDirectory.parentId
+      );
+      
+      if (duplicateAtSameLevel) {
+        const parentDir = directories?.find(d => d.id === currentDirectory.parentId);
+        const parentName = parentDir ? parentDir.name : "root level";
+        toast({
+          variant: "destructive",
+          title: "Duplicate Name",
+          description: `A directory named "${renameDirValue.trim()}" already exists at ${parentName}`,
+        });
+        return;
+      }
+      
       // Build new path based on parent
       const parentDir = directories?.find(d => d.id === currentDirectory.parentId);
       const parentPath = parentDir ? parentDir.path : "";

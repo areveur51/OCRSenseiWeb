@@ -16,6 +16,11 @@ Preferred communication style: Simple, everyday language.
   - Choose where to create new directories: root level "/" or within any existing directory
   - Allows creating multiple root-level directories (e.g., root_dir_1, root_dir_2 at same level)
   - Enables flexible directory structure organization across all levels
+  - Added validation to prevent duplicate directory names at the same parent level (case-insensitive)
+  - Validation applies to both creating and renaming directories
+  - Frontend shows immediate error feedback; backend ensures data integrity
+  - Backend normalizes names (trims whitespace) before validation and persistence
+  - Prevents duplicate bypass via leading/trailing whitespace
 - ✅ **Project Management**: Added rename and delete functionality for projects
   - Dropdown menu on project detail page (visible at project root) provides rename and delete options
   - Renaming regenerates slug automatically and redirects to new URL

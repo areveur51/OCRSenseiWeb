@@ -148,17 +148,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validated = insertDirectorySchema.parse(req.body);
       
-      // Generate slug from directory name
-      const baseSlug = generateSlug(validated.name);
+      // Normalize the name (trim whitespace)
+      const normalizedName = validated.name.trim();
       
-      // Get existing directory slugs in this project to ensure uniqueness
+      // Prevent empty names after trimming
+      if (!normalizedName) {
+        return res.status(400).json({ error: "Directory name cannot be empty" });
+      }
+      
+      // Get existing directories in this project
       const existingDirectories = await storage.getDirectoriesByProject(validated.projectId);
+      
+      // Check for duplicate names at the same level (same parentId, case-insensitive)
+      const duplicateAtSameLevel = existingDirectories.find(
+        d => d.name.trim().toLowerCase() === normalizedName.toLowerCase() && 
+             d.parentId === validated.parentId
+      );
+      
+      if (duplicateAtSameLevel) {
+        const parentName = validated.parentId 
+          ? existingDirectories.find(d => d.id === validated.parentId)?.name || "parent directory"
+          : "root level";
+        return res.status(400).json({ 
+          error: `A directory named "${normalizedName}" already exists at ${parentName}` 
+        });
+      }
+      
+      // Generate slug from normalized directory name
+      const baseSlug = generateSlug(normalizedName);
+      
+      // Get existing directory slugs to ensure uniqueness
       const existingSlugs = existingDirectories.map(d => d.slug);
       const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
       
       const directory = await storage.createDirectory({
         projectId: validated.projectId,
-        name: validated.name,
+        name: normalizedName,
         path: validated.path,
         parentId: validated.parentId,
         slug: uniqueSlug,
@@ -173,13 +198,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const updates = insertDirectorySchema.partial().parse(req.body);
-      const directory = await storage.updateDirectory(id, updates);
       
+      // Get the directory being updated
+      const directory = await storage.getDirectory(id);
       if (!directory) {
         return res.status(404).json({ error: "Directory not found" });
       }
       
-      res.json(directory);
+      // If renaming, check for duplicate names at the same level
+      if (updates.name) {
+        // Normalize the name (trim whitespace)
+        const normalizedName = updates.name.trim();
+        
+        // Prevent empty names after trimming
+        if (!normalizedName) {
+          return res.status(400).json({ error: "Directory name cannot be empty" });
+        }
+        
+        // Check if name actually changed (after normalization)
+        if (normalizedName.toLowerCase() !== directory.name.trim().toLowerCase()) {
+          const existingDirectories = await storage.getDirectoriesByProject(directory.projectId);
+          const duplicateAtSameLevel = existingDirectories.find(
+            d => d.id !== id && 
+                 d.name.trim().toLowerCase() === normalizedName.toLowerCase() && 
+                 d.parentId === directory.parentId
+          );
+          
+          if (duplicateAtSameLevel) {
+            const parentName = directory.parentId 
+              ? existingDirectories.find(d => d.id === directory.parentId)?.name || "parent directory"
+              : "root level";
+            return res.status(400).json({ 
+              error: `A directory named "${normalizedName}" already exists at ${parentName}` 
+            });
+          }
+          
+          // Generate new slug if name changed
+          const baseSlug = generateSlug(normalizedName);
+          const existingSlugs = existingDirectories.filter(d => d.id !== id).map(d => d.slug);
+          const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
+          updates.slug = uniqueSlug;
+        }
+        
+        // Update the name to the normalized version
+        updates.name = normalizedName;
+      }
+      
+      const updatedDirectory = await storage.updateDirectory(id, updates);
+      
+      if (!updatedDirectory) {
+        return res.status(404).json({ error: "Directory not found" });
+      }
+      
+      res.json(updatedDirectory);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
