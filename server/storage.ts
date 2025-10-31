@@ -102,6 +102,21 @@ export class DbStorage implements IStorage {
   }
 
   async updateProject(id: number, updates: Partial<InsertProject>): Promise<Project | undefined> {
+    // If name is being updated, regenerate slug
+    if (updates.name) {
+      const slug = await generateUniqueSlug(
+        updates.name,
+        async (slug) => {
+          const [existing] = await db
+            .select()
+            .from(projects)
+            .where(and(eq(projects.slug, slug), not(eq(projects.id, id))));
+          return existing;
+        }
+      );
+      updates.slug = slug;
+    }
+    
     const [updated] = await db
       .update(projects)
       .set({ ...updates, updatedAt: new Date() })
