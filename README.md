@@ -4,6 +4,8 @@
 
 OCRSenseiWeb is a powerful web-based OCR (Optical Character Recognition) application that extracts text from scanned images using a dual-pass verification strategy. The application features a distinctive Matrix/terminal aesthetic with bold ASCII art and offers advanced fuzzy search capabilities.
 
+![Dashboard Light](attached_assets/screens/ocr-system-dashboard-light.png)
+
 ## ✨ Features
 
 ### Core Functionality
@@ -19,6 +21,38 @@ OCRSenseiWeb is a powerful web-based OCR (Optical Character Recognition) applica
 - **Responsive Design**: Fully responsive interface that works on desktop and mobile
 - **Real-Time Updates**: Live processing status and search results
 - **Image Management**: Upload, rename, delete, and organize images with ease
+
+## 📸 Screenshots
+
+### System Dashboard
+Switch between light and dark modes with cohesive Matrix terminal theme.
+
+![Dashboard Dark](attached_assets/screens/ocr-system-dashboard-dark.png)
+
+### Project Management
+Organize images into projects with 23 unique ASCII art variations for visual distinction.
+
+![Projects](attached_assets/screens/ocr-projects.png)
+
+### Project Detail View
+Navigate through directories and manage images within each project.
+
+![Project Detail](attached_assets/screens/ocr-project-detail.png)
+
+### Dual OCR Verification Results
+View side-by-side comparison of OCR results with interactive text highlighting.
+
+![OCR Results](attached_assets/screens/ocr-dual-verif.png)
+
+### Advanced Search
+Fuzzy search across all OCR-processed text with configurable tolerance.
+
+![Search](attached_assets/screens/ocr-search.png)
+
+### Settings
+Configure fuzzy search behavior and application preferences.
+
+![Settings](attached_assets/screens/ocr-system-settings.png)
 
 ## 🛠️ Technology Stack
 
@@ -54,8 +88,8 @@ OCRSenseiWeb is a powerful web-based OCR (Optical Character Recognition) applica
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/ocrsenseiweb.git
-cd ocrsenseiweb
+git clone https://github.com/areveur51/OCRSenseiWeb.git
+cd OCRSenseiWeb
 ```
 
 2. **Install dependencies**
@@ -123,10 +157,10 @@ The application will be available at `http://localhost:5000`
 ## 🎨 Design Philosophy
 
 OCRSenseiWeb embraces a Matrix/terminal aesthetic inspired by htop and classic command-line interfaces:
-- **Bold Box-Drawing Characters**: Uses double-line Unicode characters (╔, ║, ╚, etc.) for ASCII art
+- **Bold Box-Drawing Characters**: Uses double-line Unicode characters (╔═╗╚║╝) for ASCII art
 - **Terminal Color Scheme**: Dark backgrounds with neon green highlights
 - **Monospace Fonts**: System monospace fonts for an authentic terminal feel
-- **ASCII Art Headers**: Each page features unique ASCII art representing its function
+- **Metric Style ASCII Art**: 23 unique icon variations maintaining cohesive 3-4 line compact design
 
 ## 🔧 Configuration
 
@@ -139,35 +173,52 @@ Navigate to Settings to configure fuzzy search behavior:
 ## 📁 Project Structure
 
 ```
-ocrsenseiweb/
+OCRSenseiWeb/
 ├── client/              # React frontend
 │   ├── src/
-│   │   ├── components/  # Reusable components
-│   │   ├── pages/      # Page components
-│   │   └── lib/        # Utilities and helpers
-├── server/             # Express backend
-│   ├── routes.ts       # API routes
-│   ├── storage.ts      # Database access layer
-│   └── ocr-processor.ts # OCR processing logic
-├── shared/            # Shared types and schemas
-│   └── schema.ts      # Database schema and types
-├── main.py            # Python OCR service
+│   │   ├── components/  # Reusable UI components
+│   │   ├── pages/       # Page components
+│   │   └── lib/         # Utilities and helpers
+├── server/              # Express backend
+│   ├── routes.ts        # API routes
+│   ├── storage.ts       # Database access layer
+│   └── ocr.ts           # OCR processing logic
+├── shared/              # Shared types and schemas
+│   └── schema.ts        # Database schema and types
+├── python/              # Python OCR service
+│   └── ocr_processor.py # Pytesseract integration
 └── design_guidelines.md # UI/UX design guidelines
 ```
+
+## 🗄️ Database Schema
+
+The application uses PostgreSQL with the following main tables:
+- `projects` - Project containers
+- `directories` - Subdirectory organization within projects
+- `images` - Image metadata and binary data (bytea)
+- `ocr_results` - OCR extraction results with word-level bounding boxes
+- `processing_queue` - Asynchronous job queue
+- `monitored_searches` - Saved search queries with tracking
+- `settings` - Application configuration (fuzzy search tolerance, etc.)
 
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📝 License
+## 📄 License
 
-This project is open source and available under the MIT License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- Tesseract OCR for the OCR engine
-- shadcn/ui for the component library
+- [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) for the OCR engine
+- [shadcn/ui](https://ui.shadcn.com/) for the component library
 - The Matrix for aesthetic inspiration
+
+## 📧 Contact
+
+- GitHub: [@areveur51](https://github.com/areveur51)
+- Repository: [OCRSenseiWeb](https://github.com/areveur51/OCRSenseiWeb)
 
 ---
 

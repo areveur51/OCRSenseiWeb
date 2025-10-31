@@ -3,8 +3,21 @@
 ## Overview
 OCRSenseiWeb is a Matrix-themed OCR application that extracts text from scanned images using a dual verification process. It enables users to organize projects into subdirectories, upload and process images, track OCR results with asynchronous batch processing, and search through extracted text. The application's core purpose is to provide an efficient and visually distinct tool for managing and extracting information from digitized documents.
 
+**Version**: 1.0.0  
+**License**: MIT  
+**Repository**: https://github.com/areveur51/OCRSenseiWeb.git  
+**Author**: areveur51
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
+
+## Recent Updates (October 2025)
+- ✅ Updated all ASCII art to cohesive metric style (3-4 lines, bold double-line borders)
+- ✅ Created 23 unique project icon variations
+- ✅ Added comprehensive documentation with screenshots
+- ✅ Added MIT License
+- ✅ Created CONTRIBUTING.md and deployment guides
+- ✅ Prepared repository for open source distribution
 
 ## System Architecture
 
