@@ -16,7 +16,8 @@ import { generateSlug, generateUniqueSlug } from "@shared/slugs";
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 17 * 1024 * 1024, // 17MB
+    fileSize: 20 * 1024 * 1024, // 20MB per file
+    files: 100, // Allow up to 100 files per upload for bulk operations
   },
   fileFilter: (req, file, cb) => {
     // Only allow PNG and JPG files for reliable OCR processing
@@ -593,7 +594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // File Upload
-  app.post("/api/directories/:directoryId/upload", upload.array("images", 20), async (req, res) => {
+  app.post("/api/directories/:directoryId/upload", upload.array("images", 100), async (req, res) => {
     try {
       const directoryId = parseInt(req.params.directoryId);
       const files = req.files as Express.Multer.File[];

@@ -69,6 +69,7 @@ export default function ProjectDetail() {
   const [renameProjectDialogOpen, setRenameProjectDialogOpen] = useState(false);
   const [deleteProjectDialogOpen, setDeleteProjectDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [newDirName, setNewDirName] = useState("");
   const [newDirParentId, setNewDirParentId] = useState<number | null>(null);
   const [renameDirValue, setRenameDirValue] = useState("");
@@ -139,6 +140,18 @@ export default function ProjectDetail() {
   const images = imagesData?.images;
   const pagination = imagesData?.pagination;
 
+  const handleFilesSelected = (files: File[]) => {
+    setSelectedFiles(files);
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleClearFiles = () => {
+    setSelectedFiles([]);
+  };
+
   const handleFileUpload = async (files: FileList | File[]) => {
     // If no directory exists, create a default one first
     if (!currentDirectory) {
@@ -198,6 +211,7 @@ export default function ProjectDetail() {
           description: `Created directory and uploaded ${imageCount} image(s).`,
         });
         
+        setSelectedFiles([]);
         setUploadDialogOpen(false);
       } catch (error: any) {
         toast({
@@ -242,6 +256,7 @@ export default function ProjectDetail() {
         description: `${imageCount} image(s) uploaded and queued for processing.`,
       });
       
+      setSelectedFiles([]);
       setUploadDialogOpen(false);
     } catch (error: any) {
       toast({
@@ -724,7 +739,10 @@ export default function ProjectDetail() {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+          <Dialog open={uploadDialogOpen} onOpenChange={(open) => {
+            setUploadDialogOpen(open);
+            if (!open) setSelectedFiles([]);
+          }}>
             <DialogTrigger asChild>
               <Button variant="outline" data-testid="button-upload">
                 <Upload className="h-4 w-4 mr-2" />
@@ -735,7 +753,7 @@ export default function ProjectDetail() {
               <DialogHeader>
                 <DialogTitle>Upload Images</DialogTitle>
                 <DialogDescription>
-                  Upload scanned images for OCR processing (max 17MB per file)
+                  Upload scanned images for OCR processing (max 20MB per file, up to 100 files)
                 </DialogDescription>
               </DialogHeader>
               {uploading ? (
@@ -746,11 +764,66 @@ export default function ProjectDetail() {
 ║▓▒░║
 ╚═══╝`}
                   </pre>
-                  <div className="mt-2">UPLOADING...</div>
+                  <div className="mt-2">UPLOADING {selectedFiles.length} FILE{selectedFiles.length !== 1 ? 'S' : ''}...</div>
+                </div>
+              ) : selectedFiles.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">
+                      {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearFiles}
+                      data-testid="button-clear-files"
+                    >
+                      Clear all
+                    </Button>
+                  </div>
+                  
+                  <div className="max-h-64 overflow-y-auto space-y-2 border rounded-md p-4">
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between text-sm p-2 rounded hover-elevate">
+                        <div className="flex-1 truncate">
+                          <span className="font-mono">{file.name}</span>
+                          <span className="text-muted-foreground ml-2">
+                            ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveFile(index)}
+                          data-testid={`button-remove-file-${index}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setSelectedFiles([])}
+                      variant="outline"
+                      className="flex-1"
+                      data-testid="button-select-more"
+                    >
+                      Select more files
+                    </Button>
+                    <Button
+                      onClick={() => handleFileUpload(selectedFiles)}
+                      className="flex-1"
+                      data-testid="button-confirm-upload"
+                    >
+                      Upload {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''}
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <UploadZone
-                  onFilesSelected={handleFileUpload}
+                  onFilesSelected={handleFilesSelected}
                 />
               )}
             </DialogContent>

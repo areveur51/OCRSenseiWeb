@@ -73,7 +73,7 @@ export function UploadZone({ onFilesSelected }: UploadZoneProps) {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Supports: JPG, PNG, TIFF, PDF (Max 10MB per file)
+        Supports: JPG, PNG (Max 20MB per file, up to 100 files)
       </p>
     </div>
   );
