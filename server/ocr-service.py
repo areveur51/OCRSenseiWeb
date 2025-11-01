@@ -340,14 +340,14 @@ def process_single_chunk(chunk_img, cfg, x_offset=0, y_offset=0):
             easyocr_text = result2['text'].strip()
             easyocr_conf = result2['confidence']
             
-            # Choose best result for bounding boxes
-            if pytesseract_conf >= easyocr_conf:
+            # Choose best result for bounding boxes (prefer EasyOCR when equal)
+            if pytesseract_conf > easyocr_conf:
                 best_result = result1
-                consensus_source = "pytesseract_config1"
+                consensus_source = "pytesseract"
                 consensus_conf = pytesseract_conf
             else:
                 best_result = result2
-                consensus_source = "pytesseract_config2"
+                consensus_source = "easyocr"
                 consensus_conf = easyocr_conf
         else:
             # Fast mode: Single pass
@@ -357,7 +357,7 @@ def process_single_chunk(chunk_img, cfg, x_offset=0, y_offset=0):
             easyocr_text = pytesseract_text
             easyocr_conf = pytesseract_conf
             best_result = result1
-            consensus_source = "pytesseract_config1"
+            consensus_source = "pytesseract"
             consensus_conf = pytesseract_conf
         
         # Extract bounding boxes and adjust coordinates to global image position
@@ -454,13 +454,13 @@ def merge_chunk_results(chunk_results):
     merged_pytesseract = '\n'.join(pytesseract_parts)
     merged_easyocr = '\n'.join(easyocr_parts)
     
-    # Determine consensus between merged results
-    if avg_pytesseract_conf >= avg_easyocr_conf:
+    # Determine consensus between merged results (prefer EasyOCR when equal)
+    if avg_pytesseract_conf > avg_easyocr_conf:
         consensus_text = merged_pytesseract
-        consensus_source = "pytesseract_config1"
+        consensus_source = "pytesseract"
     else:
         consensus_text = merged_easyocr
-        consensus_source = "pytesseract_config2"
+        consensus_source = "easyocr"
     
     return {
         'success': True,
@@ -469,7 +469,7 @@ def merge_chunk_results(chunk_results):
         'easyocr_text': merged_easyocr,
         'easyocr_confidence': avg_easyocr_conf,
         'consensus_text': consensus_text,
-        'consensus_source': f'chunked_processing_{consensus_source}',
+        'consensus_source': consensus_source,  # No prefix needed
         'bounding_boxes': all_bboxes,
         'chunk_count': valid_chunks
     }
@@ -620,15 +620,15 @@ def process_image(image_path, config=None):
             text2 = text1
             avg_conf2 = avg_conf1
         
-        # Determine consensus (higher confidence wins)
-        if avg_conf1 >= avg_conf2:
+        # Determine consensus (higher confidence wins, prefer EasyOCR when equal)
+        if avg_conf1 > avg_conf2:
             consensus_text = text1
-            consensus_source = "pytesseract_config1"
+            consensus_source = "pytesseract"
             consensus_conf = avg_conf1
             best_data = data1
         else:
             consensus_text = text2
-            consensus_source = "pytesseract_config2"
+            consensus_source = "easyocr"
             consensus_conf = avg_conf2
             best_data = data2
         
@@ -661,8 +661,16 @@ def process_image(image_path, config=None):
         return result
         
     except Exception as e:
+        # Return properly formatted error with empty text fields to prevent NULL in database
         return {
             'success': False,
+            'pytesseract_text': '',
+            'pytesseract_confidence': 0,
+            'easyocr_text': '',
+            'easyocr_confidence': 0,
+            'consensus_text': '',
+            'consensus_source': 'error',
+            'bounding_boxes': [],
             'error': str(e)
         }
 

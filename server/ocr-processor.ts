@@ -188,14 +188,15 @@ export class OcrProcessor {
       if (result.success) {
         // Upsert OCR result: updates existing or inserts new
         // This is atomic and safe - no data loss if processing fails
+        // Note: Keep empty strings as empty strings, not NULL, to distinguish "no text found" from "error"
         await storage.upsertOcrResult({
           imageId: queueItem.imageId,
-          pytesseractText: result.pytesseract_text || null,
-          pytesseractConfidence: result.pytesseract_confidence || null,
-          easyocrText: result.easyocr_text || null,
-          easyocrConfidence: result.easyocr_confidence || null,
-          consensusText: result.consensus_text || null,
-          consensusSource: result.consensus_source || null,
+          pytesseractText: result.pytesseract_text ?? '',
+          pytesseractConfidence: result.pytesseract_confidence ?? 0,
+          easyocrText: result.easyocr_text ?? '',
+          easyocrConfidence: result.easyocr_confidence ?? 0,
+          consensusText: result.consensus_text ?? '',
+          consensusSource: result.consensus_source ?? 'unknown',
           boundingBoxes: result.bounding_boxes as any,
         });
 
