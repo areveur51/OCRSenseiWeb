@@ -666,11 +666,15 @@ export class DbStorage implements IStorage {
           .select({ count: sql<number>`count(*)::int` })
           .from(ocrResults)
           .where(
-            or(
-              // Exact substring match (case-insensitive)
-              ilike(ocrResults.consensusText, `%${search.searchTerm}%`),
-              // Fuzzy match using word_similarity with dynamic threshold
-              sql`word_similarity(${search.searchTerm}, ${ocrResults.consensusText}) > ${threshold}`
+            and(
+              // Only count non-empty consensus text (trimmed to exclude whitespace-only)
+              sql`char_length(btrim(${ocrResults.consensusText})) > 0`,
+              or(
+                // Exact substring match (case-insensitive)
+                ilike(ocrResults.consensusText, `%${search.searchTerm}%`),
+                // Fuzzy match using word_similarity with dynamic threshold
+                sql`word_similarity(${search.searchTerm}, ${ocrResults.consensusText}) > ${threshold}`
+              )
             )
           );
         
@@ -738,9 +742,10 @@ export class DbStorage implements IStorage {
       ),
       processed_stats AS (
         SELECT count(DISTINCT ${images.id})::int as processed
-        FROM ${ocrResults}
-        INNER JOIN ${images} ON ${images.id} = ${ocrResults.imageId}
+        FROM ${images}
+        INNER JOIN ${processingQueue} ON ${processingQueue.imageId} = ${images.id}
         WHERE ${images.directoryId} IN (SELECT id FROM directory_ids)
+          AND ${processingQueue.status} = 'completed'
       )
       SELECT 
         (SELECT count(*)::int FROM directory_ids) as total_directories,

@@ -251,7 +251,7 @@ export default function ImageDetail() {
         <div className="text-center py-12 space-y-4">
           <pre className="ascii-art text-base text-muted-foreground inline-block">
 {`╔═══╗
-║ ⏸ ║
+║▌▌║
 ║   ║
 ╚═══╝`}
           </pre>

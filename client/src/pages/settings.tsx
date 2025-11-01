@@ -133,7 +133,7 @@ export default function Settings() {
         <pre className="ascii-art text-xl hidden md:block">
 {`╔═══════╗
 ║ ╔═══╗ ║
-║ ║ ⚙ ║ ║
+║ ║ ◎ ║ ║
 ║ ╚═══╝ ║
 ╚═══════╝`}
         </pre>
