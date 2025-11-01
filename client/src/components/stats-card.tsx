@@ -22,7 +22,7 @@ const iconMap: Record<string, string> = {
 ║▒▒▒║
 ╚═══╝`,
   "Processed": `╔═══╗
-║ ◉ ║
+║ ✓ ║
 ║███║
 ╚═══╝`,
   "Progress": `╔═══╗
@@ -34,7 +34,7 @@ const iconMap: Record<string, string> = {
 ║▒▒▒║
 ╚═══╝`,
   "Completed": `╔═══╗
-║ ◉ ║
+║ ✓ ║
 ║███║
 ╚═══╝`,
   "Avg. Confidence": `╔═══╗

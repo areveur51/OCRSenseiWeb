@@ -840,7 +840,7 @@ export default function ProjectDetail() {
                 <div className="text-center py-12 text-muted-foreground">
                   <pre className="ascii-art text-base inline-block">
 {`╔═══╗
-║▲▲▲║
+║↑↑↑║
 ║▓▒░║
 ╚═══╝`}
                   </pre>
@@ -932,7 +932,7 @@ export default function ProjectDetail() {
         <div className="text-center py-12 space-y-4">
           <pre className="ascii-art text-base text-muted-foreground inline-block">
 {`╔═══╗
-║ - ║
+║ ∅ ║
 ║   ║
 ╚═══╝`}
           </pre>
