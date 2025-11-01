@@ -193,14 +193,9 @@ export default function ProjectDetail() {
         queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}`] });
         queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
         
-        // Check if images were split (more created than uploaded)
-        const wasSplit = imageCount > files.length;
-        
         toast({
           title: "Upload Successful",
-          description: wasSplit
-            ? `Created directory and uploaded ${files.length} file(s), split into ${imageCount} letter-size image(s).`
-            : `Created directory and uploaded ${imageCount} image(s).`,
+          description: `Created directory and uploaded ${imageCount} image(s).`,
         });
         
         setUploadDialogOpen(false);
@@ -242,14 +237,9 @@ export default function ProjectDetail() {
       queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       
-      // Check if images were split (more created than uploaded)
-      const wasSplit = imageCount > files.length;
-      
       toast({
         title: "Upload Successful",
-        description: wasSplit 
-          ? `${files.length} file(s) uploaded and split into ${imageCount} letter-size image(s). Queued for OCR processing.`
-          : `${imageCount} image(s) uploaded and queued for processing.`,
+        description: `${imageCount} image(s) uploaded and queued for processing.`,
       });
       
       setUploadDialogOpen(false);
