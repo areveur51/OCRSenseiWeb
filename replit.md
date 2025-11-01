@@ -35,6 +35,7 @@ All OCR parameters are user-configurable via the Settings page and persist to th
 - **Settings:** Configurable fuzzy search behavior and comprehensive OCR processing options (engine mode, PSM configurations, preprocessing toggles, performance presets, worker count, preprocessing cache). All settings persist to the database.
 - **Project Management:** Supports renaming and deleting projects, directories, and images, with cascade deletion. Multi-level subdirectories are supported, allowing unlimited nesting.
 - **Monitoring:** Allows monitoring specific search terms, tracking result counts, and quickly re-running searches.
+- **Bulk Upload:** Supports uploading up to 100 files simultaneously (max 20MB per file) with duplicate detection. Files with matching filenames are automatically skipped, preventing redundant processing. Upload dialog provides file preview, individual removal, and duplicate notifications.
 
 ## External Dependencies
 *   **UI Frameworks**: Radix UI, shadcn/ui, Tailwind CSS

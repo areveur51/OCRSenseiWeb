@@ -140,8 +140,40 @@ export default function ProjectDetail() {
   const images = imagesData?.images;
   const pagination = imagesData?.pagination;
 
-  const handleFilesSelected = (files: File[]) => {
+  const handleFilesSelected = async (files: File[]) => {
     setSelectedFiles(files);
+    
+    // Check for duplicates if we have a current directory
+    if (currentDirectory?.id) {
+      try {
+        const existingImagesResponse = await fetch(
+          `/api/directories/${currentDirectory.id}/images?page=1&limit=10000`,
+          { credentials: 'include' }
+        );
+        
+        if (existingImagesResponse.ok) {
+          const existingImagesData = await existingImagesResponse.json();
+          const existingFilenames = new Set(
+            existingImagesData.images.map((img: any) => img.originalFilename.toLowerCase())
+          );
+          
+          // Check which files are duplicates
+          const duplicateCount = files.filter(f => 
+            existingFilenames.has(f.name.toLowerCase())
+          ).length;
+          
+          if (duplicateCount > 0) {
+            toast({
+              title: "Duplicate Files Detected",
+              description: `${duplicateCount} file(s) already exist and will be skipped.`,
+            });
+          }
+        }
+      } catch (error) {
+        // Silently fail - user will see duplicates during upload
+        console.error('Failed to check for duplicates:', error);
+      }
+    }
   };
 
   const handleRemoveFile = (index: number) => {
@@ -180,7 +212,7 @@ export default function ProjectDetail() {
         // Wait a moment for the query to refresh
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Now proceed with upload using the new directory
+        // For new directory, no duplicates to check - upload all files
         const formData = new FormData();
         Array.from(files).forEach((file) => {
           formData.append("images", file);
@@ -226,13 +258,53 @@ export default function ProjectDetail() {
     }
 
     setUploading(true);
-    const formData = new FormData();
-    
-    Array.from(files).forEach((file) => {
-      formData.append("images", file);
-    });
 
     try {
+      // Fetch all existing images in the directory to check for duplicates
+      const existingImagesResponse = await fetch(
+        `/api/directories/${currentDirectory.id}/images?page=1&limit=10000`,
+        { credentials: 'include' }
+      );
+      
+      if (!existingImagesResponse.ok) {
+        throw new Error('Failed to fetch existing images');
+      }
+      
+      const existingImagesData = await existingImagesResponse.json();
+      const existingFilenames = new Set(
+        existingImagesData.images.map((img: any) => img.originalFilename.toLowerCase())
+      );
+
+      // Filter out files that already exist
+      const filesToUpload: File[] = [];
+      const skippedFiles: File[] = [];
+      
+      Array.from(files).forEach((file) => {
+        if (existingFilenames.has(file.name.toLowerCase())) {
+          skippedFiles.push(file);
+        } else {
+          filesToUpload.push(file);
+        }
+      });
+
+      // If all files are duplicates, show message and return
+      if (filesToUpload.length === 0) {
+        toast({
+          title: "No New Files",
+          description: `All ${files.length} file(s) already exist in this directory.`,
+        });
+        setSelectedFiles([]);
+        setUploadDialogOpen(false);
+        setUploading(false);
+        return;
+      }
+
+      // Upload only unique files
+      const formData = new FormData();
+      filesToUpload.forEach((file) => {
+        formData.append("images", file);
+      });
+
       const response = await fetch(`/api/directories/${currentDirectory.id}/upload`, {
         method: "POST",
         body: formData,
@@ -251,9 +323,17 @@ export default function ProjectDetail() {
       queryClient.invalidateQueries({ queryKey: [`/api/p/${projectSlug}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       
+      // Show detailed feedback about upload results
+      const skippedCount = skippedFiles.length;
+      let description = `${imageCount} image(s) uploaded and queued for processing.`;
+      
+      if (skippedCount > 0) {
+        description += ` ${skippedCount} duplicate(s) skipped.`;
+      }
+
       toast({
-        title: "Upload Successful",
-        description: `${imageCount} image(s) uploaded and queued for processing.`,
+        title: "Upload Complete",
+        description,
       });
       
       setSelectedFiles([]);
