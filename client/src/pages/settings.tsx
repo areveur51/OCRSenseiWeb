@@ -272,7 +272,7 @@ export default function Settings() {
           <div className="flex items-start gap-3 mb-6">
             <pre className="ascii-art text-sm opacity-80">
 {`╔═══╗
-║ ℹ ║
+║ i ║
 ╚═══╝`}
             </pre>
             <div>
@@ -592,7 +592,7 @@ export default function Settings() {
             <div className="flex items-start gap-3 mb-6">
               <pre className="ascii-art text-sm opacity-80">
 {`╔═══╗
-║ ℹ ║
+║ i ║
 ╚═══╝`}
               </pre>
               <div>
