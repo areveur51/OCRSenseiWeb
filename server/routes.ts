@@ -716,7 +716,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Public upload endpoint using upload token
-  app.post("/api/upload/:token", upload.array("images", 100), async (req, res) => {
+  // Using upload.any() to accept files with any field name (for curl compatibility)
+  app.post("/api/upload/:token", upload.any(), async (req, res) => {
     try {
       const uploadToken = req.params.token;
       const files = req.files as Express.Multer.File[];
@@ -726,6 +727,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!files || files.length === 0) {
         console.log('[UPLOAD] Error: No files uploaded');
         return res.status(400).json({ error: "No files uploaded" });
+      }
+      
+      // Limit to 100 files
+      if (files.length > 100) {
+        console.log(`[UPLOAD] Error: Too many files (${files.length})`);
+        return res.status(400).json({ error: "Maximum 100 files allowed per upload" });
       }
       
       const directory = await storage.getDirectoryByUploadToken(uploadToken);
