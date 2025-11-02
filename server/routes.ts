@@ -714,14 +714,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const uploadToken = req.params.token;
       const files = req.files as Express.Multer.File[];
       
+      console.log(`[UPLOAD] Received upload request for token: ${uploadToken}, files: ${files?.length || 0}`);
+      
       if (!files || files.length === 0) {
+        console.log('[UPLOAD] Error: No files uploaded');
         return res.status(400).json({ error: "No files uploaded" });
       }
       
       const directory = await storage.getDirectoryByUploadToken(uploadToken);
       if (!directory) {
+        console.log(`[UPLOAD] Error: Invalid upload token: ${uploadToken}`);
         return res.status(404).json({ error: "Invalid upload link" });
       }
+      
+      console.log(`[UPLOAD] Found directory: ID=${directory.id}, name="${directory.name}", projectId=${directory.projectId}`);
       
       if (!directory.projectId) {
         return res.status(400).json({ error: "Directory has no associated project" });
@@ -732,10 +738,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Project not found" });
       }
       
+      console.log(`[UPLOAD] Found project: ID=${project.id}, name="${project.name}"`);
+      
       const uploadPath = createUploadPath(project.name, directory.name, project.id, directory.id);
       const uploadedImages = [];
       
       for (const file of files) {
+        console.log(`[UPLOAD] Processing file: ${file.originalname}, size: ${file.size} bytes`);
+        
         const fileResult = await fileStorage.saveUploadedFile(file, uploadPath);
         
         const filenameWithoutExt = file.originalname.replace(/\.[^.]+$/, '');
@@ -744,6 +754,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const existingImages = await storage.getImagesByDirectory(directory.id);
         const existingSlugs = existingImages.map(img => img.slug);
         const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
+        
+        console.log(`[UPLOAD] Creating image in directory ${directory.id} with slug: ${uniqueSlug}`);
         
         const image = await storage.createImage({
           directoryId: directory.id,
@@ -760,6 +772,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           imageData: file.buffer,
         } as any);
         
+        console.log(`[UPLOAD] Created image: ID=${image.id}, filename="${image.filename}"`);
+        
         await storage.createQueueItem({
           imageId: image.id,
           status: "pending",
@@ -768,8 +782,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           errorMessage: null,
         });
         
+        console.log(`[UPLOAD] Queued image ${image.id} for OCR processing`);
+        
         uploadedImages.push(image);
       }
+      
+      console.log(`[UPLOAD] Successfully uploaded ${uploadedImages.length} images to directory ${directory.id}`);
       
       res.status(201).json({
         success: true,
@@ -778,6 +796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         images: uploadedImages
       });
     } catch (error: any) {
+      console.error('[UPLOAD] Error during upload:', error);
       res.status(500).json({ error: error.message });
     }
   });
