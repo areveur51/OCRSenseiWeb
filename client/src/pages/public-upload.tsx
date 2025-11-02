@@ -47,11 +47,18 @@ export default function PublicUpload() {
         formData.append("images", file);
       });
 
-      const response = await apiRequest("POST", `/api/upload/${uploadToken}`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+      // Use fetch directly for file uploads to properly handle multipart/form-data
+      const res = await fetch(`/api/upload/${uploadToken}`, {
+        method: "POST",
+        body: formData,
       });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Upload failed");
+      }
+
+      const response = await res.json() as { count: number; message: string; success: boolean };
 
       setUploadedCount(response.count || selectedFiles.length);
       setUploadComplete(true);

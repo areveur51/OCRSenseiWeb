@@ -433,7 +433,7 @@ export default function ProjectDetail() {
     if (!currentDirectory) return;
 
     try {
-      const response = await apiRequest("POST", `/api/directories/${currentDirectory.id}/reprocess-errors`);
+      const response = await apiRequest("POST", `/api/directories/${currentDirectory.id}/reprocess-errors`) as { count: number; message: string; success: boolean };
       
       queryClient.invalidateQueries({ queryKey: [`/api/directories/${currentDirectory?.id}/images`] });
       
@@ -454,7 +454,7 @@ export default function ProjectDetail() {
     if (!currentDirectory) return;
 
     try {
-      const response = await apiRequest("GET", `/api/directories/${currentDirectory.id}/upload-link`);
+      const response = await apiRequest("GET", `/api/directories/${currentDirectory.id}/upload-link`) as { uploadToken: string; uploadUrl: string };
       const uploadUrl = response.uploadUrl;
       
       await navigator.clipboard.writeText(uploadUrl);
