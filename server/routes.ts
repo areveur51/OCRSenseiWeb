@@ -373,6 +373,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/directories/:id/upload-link", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const directory = await storage.getDirectory(id);
+      
+      if (!directory) {
+        return res.status(404).json({ error: "Directory not found" });
+      }
+      
+      const uploadToken = await storage.generateUploadToken(id);
+      const uploadUrl = `${req.protocol}://${req.get('host')}/upload/${uploadToken}`;
+      
+      res.json({ 
+        uploadToken,
+        uploadUrl
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/directories/:id/reorder", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -682,6 +703,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(201).json(uploadedImages);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Public upload endpoint using upload token
+  app.post("/api/upload/:token", upload.array("images", 100), async (req, res) => {
+    try {
+      const uploadToken = req.params.token;
+      const files = req.files as Express.Multer.File[];
+      
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No files uploaded" });
+      }
+      
+      const directory = await storage.getDirectoryByUploadToken(uploadToken);
+      if (!directory) {
+        return res.status(404).json({ error: "Invalid upload link" });
+      }
+      
+      if (!directory.projectId) {
+        return res.status(400).json({ error: "Directory has no associated project" });
+      }
+      
+      const project = await storage.getProject(directory.projectId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      const uploadPath = createUploadPath(project.name, directory.name, project.id, directory.id);
+      const uploadedImages = [];
+      
+      for (const file of files) {
+        const fileResult = await fileStorage.saveUploadedFile(file, uploadPath);
+        
+        const filenameWithoutExt = file.originalname.replace(/\.[^.]+$/, '');
+        const baseSlug = generateSlug(filenameWithoutExt);
+        
+        const existingImages = await storage.getImagesByDirectory(directory.id);
+        const existingSlugs = existingImages.map(img => img.slug);
+        const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
+        
+        const image = await storage.createImage({
+          directoryId: directory.id,
+          filename: fileResult.filename,
+          originalFilename: file.originalname,
+          slug: uniqueSlug,
+          filePath: fileResult.filePath,
+          fileSize: fileResult.fileSize,
+          format: fileResult.format,
+          width: fileResult.width || null,
+          height: fileResult.height || null,
+          sourceType: "upload",
+          sourceUrl: null,
+          imageData: file.buffer,
+        } as any);
+        
+        await storage.createQueueItem({
+          imageId: image.id,
+          status: "pending",
+          priority: 0,
+          attempts: 0,
+          errorMessage: null,
+        });
+        
+        uploadedImages.push(image);
+      }
+      
+      res.status(201).json({
+        success: true,
+        count: uploadedImages.length,
+        message: `${uploadedImages.length} file${uploadedImages.length !== 1 ? 's' : ''} uploaded successfully`,
+        images: uploadedImages
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get directory info by upload token (for public upload page)
+  app.get("/api/upload/:token/info", async (req, res) => {
+    try {
+      const uploadToken = req.params.token;
+      
+      const directory = await storage.getDirectoryByUploadToken(uploadToken);
+      if (!directory) {
+        return res.status(404).json({ error: "Invalid upload link" });
+      }
+      
+      const project = directory.projectId ? await storage.getProject(directory.projectId) : null;
+      
+      res.json({
+        directoryName: directory.name,
+        projectName: project?.name || "Unknown Project",
+        path: directory.path
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

@@ -41,6 +41,8 @@ export interface IStorage {
   getDirectoriesByProject(projectId: number): Promise<Directory[]>;
   getDirectory(id: number): Promise<Directory | undefined>;
   getDirectoryBySlug(projectId: number, slug: string): Promise<Directory | undefined>;
+  getDirectoryByUploadToken(uploadToken: string): Promise<Directory | undefined>;
+  generateUploadToken(directoryId: number): Promise<string>;
   createDirectory(directory: InsertDirectory): Promise<Directory>;
   updateDirectory(id: number, updates: Partial<InsertDirectory>): Promise<Directory | undefined>;
   deleteDirectory(id: number): Promise<boolean>;
@@ -334,6 +336,41 @@ export class DbStorage implements IStorage {
       .from(directories)
       .where(and(eq(directories.projectId, projectId), eq(directories.slug, slug)));
     return directory;
+  }
+
+  async getDirectoryByUploadToken(uploadToken: string): Promise<Directory | undefined> {
+    const [directory] = await db
+      .select()
+      .from(directories)
+      .where(eq(directories.uploadToken, uploadToken));
+    return directory;
+  }
+
+  async generateUploadToken(directoryId: number): Promise<string> {
+    const directory = await this.getDirectory(directoryId);
+    if (!directory) {
+      throw new Error("Directory not found");
+    }
+
+    // If directory already has a token, return it
+    if (directory.uploadToken) {
+      return directory.uploadToken;
+    }
+
+    // Generate a new unique token using nanoid-like approach
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let token = '';
+    for (let i = 0; i < 16; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    // Update directory with new token
+    await db
+      .update(directories)
+      .set({ uploadToken: token })
+      .where(eq(directories.id, directoryId));
+
+    return token;
   }
 
   async createDirectory(directory: InsertDirectory): Promise<Directory> {
