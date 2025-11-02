@@ -454,10 +454,10 @@ export default function ProjectDetail() {
     if (!currentDirectory) return;
 
     try {
-      const response = await apiRequest("GET", `/api/directories/${currentDirectory.id}/upload-link`) as { uploadToken: string; uploadUrl: string };
-      const uploadUrl = response.uploadUrl;
+      const res = await apiRequest("GET", `/api/directories/${currentDirectory.id}/upload-link`);
+      const data = await res.json() as { uploadToken: string; uploadUrl: string };
       
-      await navigator.clipboard.writeText(uploadUrl);
+      await navigator.clipboard.writeText(data.uploadUrl);
       
       toast({
         title: "Upload Link Copied",
