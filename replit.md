@@ -31,6 +31,7 @@ All OCR parameters are user-configurable via the Settings page and persist to th
 
 ### System Enhancements
 - **Shareable URLs:** Human-readable slug-based URLs are implemented for all resources, auto-generated from names and guaranteed unique.
+- **Shareable Upload Links:** Each directory can generate a unique upload token accessible via `/api/directories/:id/upload-link`. Returns API endpoint URLs (e.g., `https://...replit.app/api/upload/:token`) for programmatic file uploads via curl/scripts. Upload tokens persist in the database and accept multipart file POSTs.
 - **Search:** Features fuzzy matching using PostgreSQL's pg_trgm extension, with configurable character variation tolerance. Results are ordered by exact matches, then fuzzy matches by similarity score, and then by OCR confidence.
 - **Settings:** Configurable fuzzy search behavior and comprehensive OCR processing options (engine mode, PSM configurations, preprocessing toggles, performance presets, worker count, preprocessing cache). All settings persist to the database.
 - **Project Management:** Supports renaming and deleting projects, directories, and images, with cascade deletion. Multi-level subdirectories are supported, allowing unlimited nesting.

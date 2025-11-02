@@ -808,28 +808,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get directory info by upload token (for public upload page)
-  app.get("/api/upload/:token/info", async (req, res) => {
-    try {
-      const uploadToken = req.params.token;
-      
-      const directory = await storage.getDirectoryByUploadToken(uploadToken);
-      if (!directory) {
-        return res.status(404).json({ error: "Invalid upload link" });
-      }
-      
-      const project = directory.projectId ? await storage.getProject(directory.projectId) : null;
-      
-      res.json({
-        directoryName: directory.name,
-        projectName: project?.name || "Unknown Project",
-        path: directory.path
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
   // URL Download
   app.post("/api/directories/:directoryId/download-url", async (req, res) => {
     try {

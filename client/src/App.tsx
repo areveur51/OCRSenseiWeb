@@ -13,7 +13,6 @@ import ProjectDetail from "@/pages/project-detail";
 import ImageDetail from "@/pages/image-detail";
 import Search from "@/pages/search";
 import Settings from "@/pages/settings";
-import PublicUpload from "@/pages/public-upload";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -31,27 +30,11 @@ function Router() {
   );
 }
 
-function PublicRouter() {
-  return (
-    <Switch>
-      <Route path="/upload/:token" component={PublicUpload} />
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
-
 function AppContent() {
-  const [location] = useLocation();
-  const isPublicRoute = location.startsWith('/upload/');
-
   const style = {
     "--sidebar-width": "20rem",
     "--sidebar-width-icon": "4rem",
   };
-
-  if (isPublicRoute) {
-    return <PublicRouter />;
-  }
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>
