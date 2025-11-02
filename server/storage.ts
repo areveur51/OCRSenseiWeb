@@ -786,27 +786,23 @@ export class DbStorage implements IStorage {
     processedImages: number;
     totalDirectories: number;
   }> {
-    // Use CTE to batch queries for better performance
+    // Use CTE with LEFT JOIN to include all images, even those without queue entries
     const result = await db.execute(sql`
       WITH directory_ids AS (
         SELECT id FROM ${directories} WHERE ${directories.projectId} = ${projectId}
       ),
       image_stats AS (
-        SELECT count(*)::int as total
+        SELECT 
+          count(*)::int as total,
+          count(DISTINCT CASE WHEN ${processingQueue.status} = 'completed' THEN ${images.id} END)::int as processed
         FROM ${images}
+        LEFT JOIN ${processingQueue} ON ${processingQueue.imageId} = ${images.id}
         WHERE ${images.directoryId} IN (SELECT id FROM directory_ids)
-      ),
-      processed_stats AS (
-        SELECT count(DISTINCT ${images.id})::int as processed
-        FROM ${images}
-        INNER JOIN ${processingQueue} ON ${processingQueue.imageId} = ${images.id}
-        WHERE ${images.directoryId} IN (SELECT id FROM directory_ids)
-          AND ${processingQueue.status} = 'completed'
       )
       SELECT 
         (SELECT count(*)::int FROM directory_ids) as total_directories,
         COALESCE((SELECT total FROM image_stats), 0) as total_images,
-        COALESCE((SELECT processed FROM processed_stats), 0) as processed_images
+        COALESCE((SELECT processed FROM image_stats), 0) as processed_images
     `);
 
     const stats = result.rows[0] as any;
