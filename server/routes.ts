@@ -383,7 +383,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const uploadToken = await storage.generateUploadToken(id);
-      const uploadUrl = `${req.protocol}://${req.get('host')}/upload/${uploadToken}`;
+      
+      // Force HTTPS in production (Replit deployments use HTTPS)
+      const host = req.get('host') || '';
+      const protocol = host.includes('.replit.app') || process.env.NODE_ENV === 'production' 
+        ? 'https' 
+        : req.protocol;
+      const uploadUrl = `${protocol}://${host}/upload/${uploadToken}`;
       
       res.json({ 
         uploadToken,
