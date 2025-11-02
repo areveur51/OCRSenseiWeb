@@ -5,7 +5,7 @@ import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { Button } from "@/components/ui/button";
 import { ImageCard } from "@/components/image-card";
 import { UploadZone } from "@/components/upload-zone";
-import { Upload, Play, Plus, MoreVertical, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Upload, Play, Plus, MoreVertical, Edit, Trash2, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -425,6 +425,27 @@ export default function ProjectDetail() {
         variant: "destructive",
         title: "Processing Failed",
         description: error.message || "Failed to queue images for processing",
+      });
+    }
+  };
+
+  const handleReprocessErrors = async () => {
+    if (!currentDirectory) return;
+
+    try {
+      const response = await apiRequest("POST", `/api/directories/${currentDirectory.id}/reprocess-errors`);
+      
+      queryClient.invalidateQueries({ queryKey: [`/api/directories/${currentDirectory?.id}/images`] });
+      
+      toast({
+        title: response.count === 0 ? "No Errors Found" : "Reprocessing Started",
+        description: response.message,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Reprocess Failed",
+        description: error.message || "Failed to reprocess errors",
       });
     }
   };
@@ -912,6 +933,11 @@ export default function ProjectDetail() {
           <Button onClick={handleProcessPending} data-testid="button-process">
             <Play className="h-4 w-4 mr-2" />
             Process Pending
+          </Button>
+
+          <Button onClick={handleReprocessErrors} variant="outline" data-testid="button-reprocess-errors">
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Reprocess Errors
           </Button>
         </div>
       </div>
