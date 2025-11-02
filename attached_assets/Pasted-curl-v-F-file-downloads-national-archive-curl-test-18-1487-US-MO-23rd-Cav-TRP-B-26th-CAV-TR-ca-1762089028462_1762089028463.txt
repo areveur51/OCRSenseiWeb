@@ -1,0 +1,80 @@
+curl -v -F 'file=@downloads/national_archive/curl_test/18-1487_US-MO_-23rd-Cav-TRP-B-26th-CAV--TR-ca.-1-Jan-1916–31-Dec-1939_00001.jpg' https://areveur5117-ocrsenseiweb.replit.app/upload/AbpAeZIEXeeJyApE
+* Host areveur5117-ocrsenseiweb.replit.app:443 was resolved.
+* IPv6: (none)
+* IPv4: 34.117.33.233
+*   Trying 34.117.33.233:443...
+* ALPN: curl offers h2,http/1.1
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+* TLSv1.3 (IN), TLS change cipher, Change cipher spec (1):
+* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+* TLSv1.3 (IN), TLS handshake, Certificate (11):
+* TLSv1.3 (IN), TLS handshake, CERT verify (15):
+* TLSv1.3 (IN), TLS handshake, Finished (20):
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384 / x25519 / RSASSA-PSS
+* ALPN: server accepted h2
+* Server certificate:
+*  subject: CN=replit.app
+*  start date: Oct  4 09:45:38 2025 GMT
+*  expire date: Jan  2 10:41:33 2026 GMT
+*  subjectAltName: host "areveur5117-ocrsenseiweb.replit.app" matched cert's "*.replit.app"
+*  issuer: C=US; O=Google Trust Services; CN=WR3
+*  SSL certificate verify ok.
+*   Certificate level 0: Public key type RSA (2048/112 Bits/secBits), signed using sha256WithRSAEncryption
+*   Certificate level 1: Public key type RSA (2048/112 Bits/secBits), signed using sha256WithRSAEncryption
+*   Certificate level 2: Public key type RSA (4096/152 Bits/secBits), signed using sha384WithRSAEncryption
+* Connected to areveur5117-ocrsenseiweb.replit.app (34.117.33.233) port 443
+* using HTTP/2
+* [HTTP/2] [1] OPENED stream for https://areveur5117-ocrsenseiweb.replit.app/upload/AbpAeZIEXeeJyApE
+* [HTTP/2] [1] [:method: POST]
+* [HTTP/2] [1] [:scheme: https]
+* [HTTP/2] [1] [:authority: areveur5117-ocrsenseiweb.replit.app]
+* [HTTP/2] [1] [:path: /upload/AbpAeZIEXeeJyApE]
+* [HTTP/2] [1] [user-agent: curl/8.14.1]
+* [HTTP/2] [1] [accept: */*]
+* [HTTP/2] [1] [content-length: 227563]
+* [HTTP/2] [1] [content-type: multipart/form-data; boundary=------------------------KDDTSBXRlQrnkgBHB76C9M]
+> POST /upload/AbpAeZIEXeeJyApE HTTP/2
+> Host: areveur5117-ocrsenseiweb.replit.app
+> User-Agent: curl/8.14.1
+> Accept: */*
+> Content-Length: 227563
+> Content-Type: multipart/form-data; boundary=------------------------KDDTSBXRlQrnkgBHB76C9M
+> 
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+* upload completely sent off: 227563 bytes
+< HTTP/2 200 
+< accept-ranges: bytes
+< cache-control: public, max-age=0
+< content-length: 1003
+< content-type: text/html; charset=UTF-8
+< date: Sun, 02 Nov 2025 13:07:52 GMT
+< etag: W/"3eb-19a44a92498"
+< last-modified: Sun, 02 Nov 2025 13:02:07 GMT
+< strict-transport-security: max-age=63072000; includeSubDomains
+< x-powered-by: Express
+< via: 1.1 google
+< alt-svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+< 
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>OCR Text Extractor - Dual Verification System</title>
+    <meta name="description" content="Extract text from scanned images with dual OCR verification using pytesseract and EasyOCR. Organize projects, track processing, and search extracted content." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script type="module" crossorigin src="/assets/index-CL9_cy5u.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-C6kr_djv.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+* Connection #0 to host areveur5117-ocrsenseiweb.replit.app left intact
+</html>
