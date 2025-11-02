@@ -5,7 +5,7 @@ import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { Button } from "@/components/ui/button";
 import { ImageCard } from "@/components/image-card";
 import { UploadZone } from "@/components/upload-zone";
-import { Upload, Play, Plus, MoreVertical, Edit, Trash2, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { Upload, Play, Plus, MoreVertical, Edit, Trash2, ChevronLeft, ChevronRight, RotateCcw, Link2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -450,6 +450,28 @@ export default function ProjectDetail() {
     }
   };
 
+  const handleCopyUploadLink = async () => {
+    if (!currentDirectory) return;
+
+    try {
+      const response = await apiRequest("GET", `/api/directories/${currentDirectory.id}/upload-link`);
+      const uploadUrl = response.uploadUrl;
+      
+      await navigator.clipboard.writeText(uploadUrl);
+      
+      toast({
+        title: "Upload Link Copied",
+        description: "Anyone with this link can upload files to this directory",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to Copy Link",
+        description: error.message || "Failed to generate upload link",
+      });
+    }
+  };
+
   const handleRenameDirectory = async () => {
     if (!currentDirectory || !renameDirValue.trim()) return;
     // Don't allow renaming root directories (those with no parent)
@@ -733,6 +755,10 @@ export default function ProjectDetail() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
+                    <DropdownMenuItem onClick={handleCopyUploadLink} data-testid="menu-item-copy-upload-link">
+                      <Link2 className="h-4 w-4 mr-2" />
+                      Copy Upload Link
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => {
                       setRenameDirValue(currentDirectory.name);
                       setRenameDirDialogOpen(true);
