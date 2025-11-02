@@ -1189,6 +1189,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Diagnostic endpoint to check directory upload token
+  app.get("/api/admin/check-directory/:slugOrToken", async (req, res) => {
+    try {
+      const slugOrToken = req.params.slugOrToken;
+      
+      // Try finding by upload token first
+      let directory = await storage.getDirectoryByUploadToken(slugOrToken);
+      
+      if (!directory) {
+        // Try finding all directories and search by slug
+        const allDirs = await storage.getAllDirectories();
+        directory = allDirs.find(d => d.slug === slugOrToken);
+      }
+      
+      if (!directory) {
+        return res.status(404).json({ error: "Directory not found" });
+      }
+      
+      const project = directory.projectId ? await storage.getProject(directory.projectId) : null;
+      const images = await storage.getImagesByDirectory(directory.id);
+      
+      res.json({
+        directory: {
+          id: directory.id,
+          name: directory.name,
+          slug: directory.slug,
+          path: directory.path,
+          uploadToken: directory.uploadToken,
+          projectId: directory.projectId,
+        },
+        project: project ? {
+          id: project.id,
+          name: project.name,
+          slug: project.slug,
+        } : null,
+        imageCount: images.length,
+        recentImages: images.slice(0, 5).map(img => ({
+          id: img.id,
+          filename: img.filename,
+          uploadedAt: img.uploadedAt,
+        })),
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Start OCR processing queue
