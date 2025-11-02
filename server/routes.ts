@@ -350,6 +350,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/directories/:id/reprocess-errors", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const directory = await storage.getDirectory(id);
+      
+      if (!directory) {
+        return res.status(404).json({ error: "Directory not found" });
+      }
+      
+      const count = await storage.reprocessFailedImagesInDirectory(id);
+      
+      res.json({ 
+        success: true, 
+        count,
+        message: count === 0 
+          ? "No failed images to reprocess" 
+          : `${count} failed image${count !== 1 ? 's' : ''} reset to pending status`
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/directories/:id/reorder", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

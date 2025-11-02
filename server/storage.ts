@@ -543,6 +543,25 @@ export class DbStorage implements IStorage {
     };
   }
 
+  async reprocessFailedImagesInDirectory(directoryId: number): Promise<number> {
+    // Find all failed images in this directory and reset them to pending
+    const result = await db.execute(sql`
+      UPDATE processing_queue
+      SET 
+        status = 'pending',
+        error_message = NULL,
+        attempts = 0,
+        started_at = NULL,
+        completed_at = NULL
+      WHERE image_id IN (
+        SELECT id FROM images WHERE directory_id = ${directoryId}
+      )
+      AND status = 'failed'
+    `);
+    
+    return result.rowCount || 0;
+  }
+
   // Search
   async searchText(query: string, options?: { offset?: number; limit?: number }): Promise<{ 
     results: Array<{ 
