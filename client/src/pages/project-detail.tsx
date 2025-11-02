@@ -776,7 +776,22 @@ export default function ProjectDetail() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              ) : directoryPath.length === 0 && (
+              ) : currentDirectory && directoryPath.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" data-testid="button-directory-menu">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={handleCopyUploadLink} data-testid="menu-item-copy-upload-link">
+                      <Link2 className="h-4 w-4 mr-2" />
+                      Copy Upload Link
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) }
+              {directoryPath.length === 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" data-testid="button-project-menu">
