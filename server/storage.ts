@@ -38,6 +38,7 @@ export interface IStorage {
   convertDirectoryToProject(directoryId: number): Promise<Project>;
 
   // Directories
+  getAllDirectories(): Promise<Directory[]>;
   getDirectoriesByProject(projectId: number): Promise<Directory[]>;
   getDirectory(id: number): Promise<Directory | undefined>;
   getDirectoryBySlug(projectId: number, slug: string): Promise<Directory | undefined>;
@@ -321,6 +322,10 @@ export class DbStorage implements IStorage {
   }
 
   // Directories
+  async getAllDirectories(): Promise<Directory[]> {
+    return db.select().from(directories).orderBy(directories.id);
+  }
+
   async getDirectoriesByProject(projectId: number): Promise<Directory[]> {
     return db.select().from(directories).where(eq(directories.projectId, projectId)).orderBy(directories.sortOrder);
   }

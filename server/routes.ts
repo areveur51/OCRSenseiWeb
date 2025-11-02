@@ -1165,6 +1165,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin endpoint to backfill upload tokens for all directories
+  app.post("/api/admin/backfill-upload-tokens", async (req, res) => {
+    try {
+      const allDirectories = await storage.getAllDirectories();
+      let backfilledCount = 0;
+      
+      for (const directory of allDirectories) {
+        if (!directory.uploadToken) {
+          await storage.generateUploadToken(directory.id);
+          backfilledCount++;
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Backfilled ${backfilledCount} upload tokens`,
+        total: allDirectories.length,
+        backfilled: backfilledCount
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Start OCR processing queue
