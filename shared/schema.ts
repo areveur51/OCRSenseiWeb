@@ -46,10 +46,12 @@ export const directories = pgTable("directories", {
   path: text("path").notNull(),
   parentId: integer("parent_id").references((): any => directories.id, { onDelete: "cascade" }),
   sortOrder: integer("sort_order").notNull().default(0),
+  uploadToken: text("upload_token").unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   projectIdIdx: index("directories_project_id_idx").on(table.projectId),
   slugIdx: index("directories_slug_idx").on(table.projectId, table.slug),
+  uploadTokenIdx: index("directories_upload_token_idx").on(table.uploadToken),
 }));
 
 export const images = pgTable("images", {
