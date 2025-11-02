@@ -389,7 +389,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const protocol = host.includes('.replit.app') || process.env.NODE_ENV === 'production' 
         ? 'https' 
         : req.protocol;
-      const uploadUrl = `${protocol}://${host}/upload/${uploadToken}`;
+      // Generate API endpoint URL for programmatic uploads (curl, scripts, etc.)
+      const uploadUrl = `${protocol}://${host}/api/upload/${uploadToken}`;
       
       res.json({ 
         uploadToken,
